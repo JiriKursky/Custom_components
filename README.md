@@ -38,52 +38,43 @@ turnoffon:
     pump:
       action_entity_id: input_boolean.pump
       timers: { "6:05":15, "07:00":15, "08:05":15, "08:45":15, "09:30":15, "10:15":15, "14:00":15, "16:05":15, "18:00":15, "19:00":15, "20:15":15, "21:05":15, "22:15":15, "22:55":15 }      
-      condition_run: input_boolean.cerpadlo_timer
-    sprinlger_1:
-      action_entity_id: input_boolean.postrikovac_1
-      name: Spodek
+      condition_run: input_boolean.pump_timer
+    sprinkler_1:
+      action_entity_id: input_boolean.sprinkler_1
+      name: Area 1
       timers: { "12:00":"16:00","21:00":"22:00" }      
-    postrik_2:
-      action_entity_id: input_boolean.postrikovac_2
-      name: Horejsek
+    sprinkler_2:
+      action_entity_id: input_boolean.sprinkler_2
+      name: Area 2
       timers: { "8:00":"10:00","16:00":"18:00" }      
-    postrik_3:
-      action_entity_id: input_boolean.postrikovac_4
-      name: Jahody
+    sprinkler_3:
+      action_entity_id: input_boolean.sprinkler_3
+      name: Area 3
       timers: { "6:00":"8:00","18:00":"20:00" }      
-    postrik_4:
-      action_entity_id: input_boolean.postrikovac_3
-      name: Zadek
+    sprinkler_4:
+      action_entity_id: input_boolean.sprinkler_4
+      name: Area 4
       timers: { "10:00":"12:00","22:00":"23:59" }
 ```
-Význam jednotlivých položek
+Explanation
 ```yaml
 turnoffon:    
-    # Nazev entity - nemenit
+    # Entity domain - do not change
     #
-    filtrace:
-    # Libovolny nazev entity. V tomto pripade bude automaticky zalozena entita s nazvem turnoffon.filtrace
+    filtration:
+    # Entity_id. Will be created turnoffon.filtration
     #
-      action_entity_id: input_boolean.filtrace_zapni
-      # Co se ma zapnout v danem casovem intervalu volanim turn_on a vypnout volanim turn_off
-      # musite zadefinovat v sekci input_boolean a navazat prislusnou automatizaci
+      action_entity_id: input_boolean.filtration
+      # Will be called with turn_on in defined interval and with turn_off outside this interval      
       #
       timers: { "6:10":50, "10:10":30, "12:00":30, "13:10":2, "15:00":20, "17:00":20, "18:00":50, "20:00":30, "21:20":5 }      
-      # Casovace. Musi zacinat slozenou zavorkou a taktez koncit.
-      # co carka, to novy interval
-      # vyznam "6:10":50 - bude začínat v 6:10 a zapnuto po dobu 50 minut
-      # druhy interval nesmi byt mensi nebo roven nule a nesmi byt vetsi nez 59
-      # Pozor na cas 24:00 - nefunguje
+      # Definition turn_on intervals 
+      # "6:10":50 start at 6:10 for 50 minutes - do not exceed 59 minutes! do not put commas etc 
+      # warning do not use "24:00"
       # ----------------
-      # Druhy zpusob zapisu je "6:10":"7:00" 
-      # Znamena od 6:10 - 7:00. Pokud to nejak prehodite, program to nehlida, nepokouset
-      # S druhym zapisem muzete v pohode prekrocit 59 minut
-      # ----------------
-      # Kazda carka znamena novy interval. Program zalozi turnoffon.filtrace_1, turnoffon.filtrace_2, ...
-      # Vzdy pridava _01, _02..._10, _11... , _101, _102 .. _n
-      # Pomoci automaticky zalozenych entit - muzete je zobrazit
-      #
+      # Second possibilty of define timer "6:10":"8:00" 
       condition_run: input_boolean.filtrace_timer
-      # Timto je mozno rucne vypnout. Nastavite-li input_boolean v condition run na "off" nebude se nic provadet
-      # Pouzivam, pro cerpadlo zavlahy, pokud sensor ukazuje dest - nezalevam
+      # App is testing this for 'on' or 'off'. You will stop automatisation. I am using for instance for sprinkler in rainy days      
 ```
+
+You can find useful attributes in entities
