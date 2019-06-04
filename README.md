@@ -83,4 +83,4 @@ turnoffon:
       # App is testing this for 'on' or 'off'. You will stop automatisation. I am using for instance for sprinkler in rainy days      
 ```
 
-You can find useful attributes in entities. There are several serices.
+You can find useful attributes in entities. There are several services. If somebody need I am going to publish however I do not want spend time with that now.
