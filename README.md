@@ -8,7 +8,7 @@ Installation:
 1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy files 
 2. Change your *configuration.yaml*. Platform *turnoffon*
 
-Exapmle of turn_on/turn_of of filtration in intervals:
+Example of turn_on/turn_of of filtration in intervals:
 10:20 - 20 minutes
 17:00 - 20:50
 
