@@ -1,5 +1,6 @@
 # Simple defining several timers for controlling devices during day
 For instance filtration in swimming pool
+
 Tested on *hass.io* ver. 0.93.2 
 > **Warning:**
 > Still not absolutely safe for wrong config. Be sure that you backup your HA.
@@ -23,7 +24,7 @@ turnoffon:
       action_entity_id: input_boolean.filtration
       timers: { "10:20":20, "17:00":"20:50" }      
 ```
-Compomnent automatically create *turnoffon.filtration* - main (parent for controlling) and *turnoffon.filtration_01* , *turnoffon.filtration_02* (children). "Automation is automatically" in component
+Component automatically create *turnoffon.filtration* - main (parent for controlling) and *turnoffon.filtration_01* , *turnoffon.filtration_02* (children). "Automation is automatically" in component
 That's all!
 
 *You can use more complex solution with several parents and their children*
