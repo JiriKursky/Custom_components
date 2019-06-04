@@ -3,6 +3,16 @@ run_turnoffon:
   fields:
     entity_id: {description: Entity id of the input datetime to set the new value.,
       example: turnoffon.filtrace}
+turn_on:
+  description: Timer will run as usual. 
+  fields:
+    entity_id: {description: Parent entity id of timer.,
+      example: turnoffon.filtrace}
+turn_off:
+  description: Timer will be stopped.
+  fields:
+    entity_id: {description: Parent entity id of timer.,
+      example: turnoffon.filtrace}
 set_time:
   description: This can be used to dynamically set start_time and end_time. These values
   fields:

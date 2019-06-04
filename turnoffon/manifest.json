@@ -1,8 +1,7 @@
-    
 {
   "domain": "turnoffon",
   "name": "Turn_off_on",
-  "documentation": "https://github.com/JiriKursky/Hass.io_CZ_SK_custom_components",
+  "documentation": "https://github.com/JiriKursky/Custom_components",
   "dependencies": [],
   "codeowners": [],
   "requirements": []

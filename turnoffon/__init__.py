@@ -5,17 +5,22 @@ Version is still not stable and wrong configuration can lead to frozen system
 
 Tested on under hass.io ver. 0.93.2 
 
-Many thanks to VDRainer, ballob authors of input_datetime, I used for inspiration
+Many thanks to 
+
+VDRainer    https://github.com/VDRainer
+ballob      https://github.com/balloob
+
+authors of input_datetime, I used for inspiration
+
 https://github.com/home-assistant/home-assistant/tree/dev/homeassistant/components/input_datetime
 
-1.6.2019
+Releaes:
 
-verze 1.0
+https://github.com/JiriKursky/Hass.io_CZ_SK_custom_components/releases
+b'{"StatusSNS":{"Time":"2019-06-03T18:21:41",
+"ENERGY":{"TotalStartTime":"2019-04-07T10:55:27",
+"Total":54.772,"Yesterday":1.748,"Today":0.961,"Power":0,"ApparentPower":0,"ReactivePower":0,"Factor":0.00,"Voltage":0,"Current":0.000}}}'
 
-2.6.2019
-verze 1.1
-    zmena nazvu atributu z konec na end_time
-    pridani last_run do behu
 """
 
 import logging
@@ -24,7 +29,7 @@ import time
 
 import voluptuous as vol
 
-from homeassistant.const import ATTR_ENTITY_ID, CONF_ICON, CONF_NAME, SERVICE_TURN_ON, SERVICE_TURN_OFF
+from homeassistant.const import ATTR_ENTITY_ID, CONF_ICON, CONF_NAME, SERVICE_TURN_ON, SERVICE_TURN_OFF, STATE_ON, STATE_OFF
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.helpers.restore_state import RestoreEntity
@@ -33,6 +38,8 @@ from homeassistant.core import split_entity_id
 from homeassistant.helpers.event import async_track_time_interval
 
 DOMAIN = 'turnoffon'
+ENTITY_ID_FORMAT = DOMAIN + '.{}'
+_LOGGER = logging.getLogger(__name__)
 
 LI_NO_DEFINITION = 'No entity added'
 
@@ -50,10 +57,11 @@ R_ENTITY_ID = "ENTITY_ID"
 O_PARENT = 'PARENT'
 O_CHILDREN = 'CHILDREN'
 
-# Nazvy attributu
-ATTR_START_TIME    = 'start_time'
-ATTR_END_TIME      = 'end_time'
-ATTR_LAST_RUN   = 'last_run'
+# Used attributes
+ATTR_START_TIME         = 'start_time'
+ATTR_END_TIME           = 'end_time'
+ATTR_LAST_RUN           = 'last_run'
+ATTR_ACTIVE_ENTITY_ID   = 'active_entity_id'
 
 # Konstanta definice sluzby
 SERVICE_RUN_CASOVAC = 'run_turnoffon'
@@ -75,8 +83,33 @@ SERVICE_SET_TIME_SCHEMA = vol.Schema({
     vol.Optional(ATTR_END_TIME): cv.time,        
 }, has_start_or_end)
 
-_LOGGER = logging.getLogger(__name__)
-ENTITY_ID_FORMAT = DOMAIN + '.{}'
+# Konstanta definice sluzby
+SERVICE_SET_TURN_ON = SERVICE_TURN_ON
+SERVICE_SET_TURN_ON_SCHEMA = vol.Schema({
+    vol.Required(ATTR_ENTITY_ID): cv.entity_id    
+})
+
+# Konstanta definice sluzby
+SERVICE_SET_TURN_OFF = SERVICE_TURN_OFF
+SERVICE_SET_TURN_OFF_SCHEMA = vol.Schema({
+    vol.Required(ATTR_ENTITY_ID): cv.entity_id    
+})
+
+# Services forced turn_on turn_off
+"""
+Prepared idea
+KEY_WORD_FORCED = 'forced'
+
+SERVICE_SET_FORCED_TURN_OFF = KEY_WORD_FORCED + '_' + SERVICE_TURN_OFF
+SERVICE_SET_FORCED_TURN_OFF_SCHEMA = vol.Schema({
+    vol.Required(ATTR_ENTITY_ID): cv.entity_id    
+})
+
+SERVICE_SET_FORCED_TURN_ON = KEY_WORD_FORCED + '_' + SERVICE_TURN_ON
+SERVICE_SET_FORCED_TURN_ON_SCHEMA = vol.Schema({
+    vol.Required(ATTR_ENTITY_ID): cv.entity_id    
+})
+"""
 
 ERR_CONFIG_TIME_SCHEMA = 'Chybne zadefinovane casy'
 ERR_CONFIG_TIME_2 = 'Delka musi byt v rozsahu 1 - 59'
@@ -124,29 +157,35 @@ async def async_setup(hass, config):
     hass.data[DOMAIN] = { O_PARENT: {}, O_CHILDREN: {}}
     
 
-    # Nacteni konfigurace
-    for object_id, cfg in config[DOMAIN].items():                
+    # Reading in config
+    for object_id, cfg in config[DOMAIN].items():    
+        if cfg is None:            
+            return False        
         casy = cfg.get(CONF_CASY)
+        if casy is None:
+            _LOGGER.info(LI_NO_DEFINITION)
+            return False
 
+        # Default creation of name or from config        
+        parent_name = cfg.get(CONF_NAME) 
+        if parent_name is None:
+            parent_name = object_id
+        
         # citac
         i = 0    
         for start_time, end_time in casy.items():
             i = i + 1
             
             new_object_id = get_child_object_id(object_id, i)
-            name = object_id
+            name = parent_name + ' ' + str(i)
             entity = Casovac(hass, new_object_id, name, start_time, end_time)
-            _LOGGER.debug("Adding object: " + new_object_id)
+            _LOGGER.info('Setting up ' + new_object_id)
             hass.data[DOMAIN][O_CHILDREN][new_object_id] = entity            
             entities.append(entity)
 
-        # Default creation of name or from config        
-        name = cfg.get(CONF_NAME) 
-        if name is None:
-            name = object_id
         
         # Create entity_id
-        casovacHlavni = CasovacHlavni(hass, object_id, name, i, cfg)
+        casovacHlavni = CasovacHlavni(hass, object_id, parent_name, i, cfg)
 
         # Push to store
         hass.data[DOMAIN][O_PARENT][object_id] = casovacHlavni        
@@ -158,7 +197,7 @@ async def async_setup(hass, config):
     if not entities:
         _LOGGER.info(LI_NO_DEFINITION)    
         return False
-    _LOGGER.info('Registered parent entities. Number: ' + str(i))
+    
 
     # Musi byt pridano az po definici vyse - je potreba znat pocet zaregistrovanych casovacu    
 
@@ -197,35 +236,88 @@ async def async_setup(hass, config):
         async_set_time_service
     )
     
+    async def async_set_turn_on_service(entity, call):
+        """Spusteni behu."""        
+        entity.set_turn_on()        
+
+
+    component.async_register_entity_service(
+        SERVICE_SET_TURN_ON, SERVICE_SET_TURN_ON_SCHEMA, 
+        async_set_turn_on_service
+    )
+
+    async def async_set_turn_off_service(entity, call):
+        """Setting turn_off."""        
+        entity.set_turn_off()        
+
+
+    component.async_register_entity_service(
+        SERVICE_SET_TURN_OFF, SERVICE_SET_TURN_OFF_SCHEMA, 
+        async_set_turn_off_service
+    )
+
     await component.async_add_entities(entities)
     return True
 
-def prevedCasPar(sCas, praveTed):
-    tCas = time.strptime(sCas, '%H:%M')         
-    praveTed = datetime.datetime.now()    
-    return praveTed.replace(hour=tCas.tm_hour, minute=tCas.tm_min, second=0)
 
-def prevedCas(sCas):
-    # String to datetime now
-    return prevedCasPar(sCas, datetime.datetime.now())
+class TurnonoffEntity(RestoreEntity):
+    def __init__(self, hass, object_id, parent, name):
+        self.entity_id = ENTITY_ID_FORMAT.format(object_id) # definice identifikatoru        
+        self._name = name
+        self._parent = parent
+        self._last_run = None
 
-def zobraz_cas(tCas):
-    return tCas.strftime('%H:%M')
+    @property
+    def icon(self):
+        """Return the icon to be used for this entity."""
+        return 'mdi:timer'
 
-def check_end_time(start_time, end_time) :    
-    if isinstance(end_time, int):        
-        return zobraz_cas(prevedCas(start_time) + datetime.timedelta(minutes = end_time))
-    return end_time
+    def zobraz_cas(self, tCas):
+        return tCas.strftime('%H:%M')
 
-class CasovacHlavni(RestoreEntity):
+    def check_end_time(self, start_time, end_time) :    
+        if isinstance(end_time, int):        
+            return self.zobraz_cas(self.prevedCas(start_time) + datetime.timedelta(minutes = end_time))
+        return end_time
+
+    def prevedCasPar(self, sCas, praveTed):
+        tCas = time.strptime(sCas, '%H:%M')         
+        praveTed = datetime.datetime.now()    
+        return praveTed.replace(hour=tCas.tm_hour, minute=tCas.tm_min, second=0)
+
+    def prevedCas(self, sCas):
+        # String to datetime now
+        return self.prevedCasPar(sCas, datetime.datetime.now())
+
+    def set_turn_on(self):
+        raise ValueError('For children entity not allowed')
+
+    def set_turn_off(self):
+        raise ValueError('For children entity not allowed')
+
+    def set_last_run(self):
+        """ Update attributu ATTR_LAST_RUN """
+        self._last_run = datetime.datetime.now() 
+        self.async_schedule_update_ha_state()
+    
+    async def async_added_to_hass(self):        
+        """Run when entity about to be added."""
+        await super().async_added_to_hass()        
+        old_state = await self.async_get_last_state()
+        if old_state is not None:                            
+            self._last_run =  old_state.attributes.get(ATTR_LAST_RUN, self._last_run)                       
+
+class CasovacHlavni(TurnonoffEntity):
     def __init__(self, hass, object_id, name, pocet, cfg):
         """Inicializace hlavni ridici class"""
-        self.entity_id = ENTITY_ID_FORMAT.format(object_id) # definice identifikatoru
-        self._name = name                                   # friendly_name
+        super().__init__(hass, object_id, True, name)        
         self._pocet = pocet                                 # pocet zadefinovanych casovacu
         self._cfg = cfg                                     # konfigurace v dane domene
         self._hass = hass                                   # uschovani classu hass
+        self._active_entity_id = None                       # active child
+        self._state = STATE_ON                              
 
+    
     @property
     def should_poll(self):
         """If entity should be polled."""
@@ -245,23 +337,35 @@ class CasovacHlavni(RestoreEntity):
                 return        
         _LOGGER.debug("Volam sluzbu "+ DOMAIN + " - " + SERVICE_RUN_CASOVAC + " pro: " + self.entity_id)
         self._hass.services.call(DOMAIN, SERVICE_RUN_CASOVAC, { "entity_id": self.entity_id }, False) 
+    
+    def set_turn_on(self):
+        self._state = STATE_ON
+        self.async_schedule_update_ha_state()
+
+    def set_turn_off(self):
+        self._state = STATE_OFF
+        self.async_schedule_update_ha_state()
 
     @property
     def state(self):
         """Return the state of the component."""
-        return "on"
+        return self._state
 
     def run_casovac(self):        
         """ Hlavni funkce, ktera vraci jaka sluzba se bude volat v zavislosti na casovych intervalech """
-        
+        self._active_entity_id = None
+
+        if self._state == STATE_OFF:
+            return
+
         _LOGGER.debug("Hledam aktivni interval pro: "+self.entity_id)
 
         # Vlastni hledani aktivniho intervalu
         i = 1
-        aktivni_entity_id = None
+        
         praveTed = datetime.datetime.now() 
 
-        while (aktivni_entity_id == None) and (i <= self._pocet):        
+        while (self._active_entity_id == None) and (i <= self._pocet):        
             entity_id = get_child_object_id(self.entity_id, i)
             
             entity = self.hass.states.get(entity_id)
@@ -273,13 +377,13 @@ class CasovacHlavni(RestoreEntity):
 
             start_time = attr[ATTR_START_TIME]
             end_time = attr[ATTR_END_TIME]
-            if (praveTed >= prevedCasPar(start_time, praveTed)) and (praveTed <= prevedCasPar(end_time, praveTed)):        
+            if (praveTed >= self.prevedCasPar(start_time, praveTed)) and (praveTed <= self.prevedCasPar(end_time, praveTed)):        
                 # aktivni cas a nasel jsem
-                aktivni_entity_id = entity_id
+                self._active_entity_id = entity_id
             i = i + 1
 
         # V zavislosti je-li v casovem intervalu spoustim prikaz
-        if aktivni_entity_id == None :
+        if self._active_entity_id == None :
             toDo = self._cfg.get(CONF_COMMAND_OFF)
         else:
             # Bude se nastavovat
@@ -289,10 +393,11 @@ class CasovacHlavni(RestoreEntity):
             # self.hass.services.async_call(DOMAIN, SERVICE_SET_TIME, { "entity_id": aktivni_entity.entity_id}, False)
             # bez sance
             # nahrazeno pres hass.data
-            _ , entity_id = split_entity_id(aktivni_entity_id)
+            _ , entity_id = split_entity_id(self._active_entity_id)
             active_object = self.hass.data[DOMAIN][O_CHILDREN][entity_id]
-            active_object.set_last_run()
-            
+            active_object.set_last_run()   # children
+            self.set_last_run()            # parent
+        
         # navratova hodnota
         retVal = {
             R_HASS: self.hass,                                  # mozna to jde jinak, ale neumim            
@@ -301,28 +406,38 @@ class CasovacHlavni(RestoreEntity):
         }        
         self.async_schedule_update_ha_state()                        
         return retVal
-
-    @property
-    def icon(self):
-        """Return the icon to be used for this entity."""
-        return 'mdi:timer'
-
+    
     def set_time(self, start_time, end_time):
         """ Prazdna funkce v pripade volani pro tuto entitu """ 
         _LOGGER.debug("FATAL")
         return
-    
 
-class Casovac(RestoreEntity):
+    async def async_added_to_hass(self):        
+        """Run when entity about to be added."""
+        await super().async_added_to_hass()        
+        old_state = await self.async_get_last_state()
+        if old_state is not None:                        
+            self._state  = old_state.state
+            
+    @property
+    def state_attributes(self):
+        """Return the state attributes."""
+        attrs = {
+            ATTR_LAST_RUN: self._last_run,
+            ATTR_ACTIVE_ENTITY_ID : self._active_entity_id
+        }
+        return attrs
+    
+            
+
+class Casovac(TurnonoffEntity):
     """Casovac entita pro jednotlive zadefinovane casy."""
 
     def __init__(self, hass, object_id, name, start_time, end_time):
         """Inicializace casovac"""
-        self.entity_id = ENTITY_ID_FORMAT.format(object_id)
-        self._name = name        
-        self._start_time = start_time                           # zacatek casoveho intervalu
-        self._end_time = check_end_time(start_time, end_time)   # konecny cas        
-        self._last_run = None                                   # posledni beh
+        super().__init__(hass, object_id, True, name)                
+        self._start_time = start_time                                           # zacatek casoveho intervalu
+        self._end_time = self.check_end_time(start_time, end_time)   # konecny cas                
         
     async def async_added_to_hass(self):        
         """Run when entity about to be added."""
@@ -331,7 +446,7 @@ class Casovac(RestoreEntity):
         if old_state is not None:                        
             self._start_time  = old_state.attributes.get(ATTR_START_TIME, self._start_time)           
             self._end_time  = old_state.attributes.get(ATTR_END_TIME, self._end_time)           
-            self._last_run =  old_state.attributes.get(ATTR_LAST_RUN, self._last_run)                       
+            
 
     @property
     def should_poll(self):
@@ -358,13 +473,7 @@ class Casovac(RestoreEntity):
             ATTR_LAST_RUN: self._last_run
         }
         return attrs
-    
-    def set_last_run(self):
-        """ Update attributu ATTR_LAST_RUN """
-        self._last_run = datetime.datetime.now() 
-        self.async_schedule_update_ha_state()
-    
-            
+                
     def set_time(self, start_time, end_time):
         """ Sluzba uvnitr jednotliveho casovace. """        
         _LOGGER.debug("Setting new start_time:")
@@ -372,10 +481,10 @@ class Casovac(RestoreEntity):
         if start_time is None:
             start_time = self._start_time
         else:
-            self._start_time = zobraz_cas(start_time)
+            self._start_time = self.zobraz_cas(start_time)
 
         if end_time is not None:
-            self._end_time = check_end_time(start_time, zobraz_cas(end_time))        
+            self._end_time = self.check_end_time(start_time, self.zobraz_cas(end_time))        
             _LOGGER.debug("Setting new end_time")
             _LOGGER.debug(end_time)
         self.async_schedule_update_ha_state()
@@ -384,8 +493,3 @@ class Casovac(RestoreEntity):
     def async_run_casovac(self):
         """V tomto pripade se nepouziva."""        
         return 
-    
-    @property
-    def icon(self):
-        """Return the icon to be used for this entity."""
-        return 'mdi:timer'
