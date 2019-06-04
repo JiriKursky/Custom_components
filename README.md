@@ -8,13 +8,13 @@ Installation:
 1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy files 
 2. Change your *configuration.yaml*. Platform *turnoffon*
 
-> Basically app check intervals each minutesProgram se chová tak, že v definovaný interval volá každou minutu službu *turn_on*, mimo něj *turn_off*.
-
 Exapmle of turn_on/turn_of of filtration in intervals:
 10:20 - 20 minutes
 17:00 - 20:50
 
-In these intervals will each minute calling service *turn_on* - *input_boolean.filtration". Outside then *turn_off*. This helps with restart of HA etc.
+In these intervals will each minute calling service *turn_on* - *input_boolean.filtration". Outside then *turn_off*. 
+
+You can stop calling with condition explained below or with state = 'off' of parent entity.
 
 Add to your *configuration.yaml*
 ```yaml
@@ -23,7 +23,7 @@ turnoffon:
       action_entity_id: input_boolean.filtration
       timers: { "10:20":20, "17:00":"20:50" }      
 ```
-Compomnent automatically create *turnoffon.filtration* - main (parent for controlling) and *turnoffon.filtration_01* (child). "Automation is automatically" in component
+Compomnent automatically create *turnoffon.filtration* - main (parent for controlling) and *turnoffon.filtration_01* , *turnoffon.filtration_02* (children). "Automation is automatically" in component
 That's all!
 
 *You can use more complex solution with several parents and their children*
@@ -34,7 +34,7 @@ turnoffon:
     filtration:
       action_entity_id: input_boolean.filtration
       timers: { "6:10":50, "10:10":30, "12:00":30, "13:10":2, "15:00":20, "17:00":20, "18:00":50, "20:00":30, "21:20":5 }      
-      condition_run: input_boolean.filtrace_timer
+      condition_run: input_boolean.filtration_timer
     pump:
       action_entity_id: input_boolean.pump
       timers: { "6:05":15, "07:00":15, "08:05":15, "08:45":15, "09:30":15, "10:15":15, "14:00":15, "16:05":15, "18:00":15, "19:00":15, "20:15":15, "21:05":15, "22:15":15, "22:55":15 }      
@@ -73,8 +73,8 @@ turnoffon:
       # warning do not use "24:00"
       # ----------------
       # Second possibilty of define timer "6:10":"8:00" 
-      condition_run: input_boolean.filtrace_timer
+      condition_run: input_boolean.filtration_timer
       # App is testing this for 'on' or 'off'. You will stop automatisation. I am using for instance for sprinkler in rainy days      
 ```
 
-You can find useful attributes in entities
+You can find useful attributes in entities. There are several serices.
