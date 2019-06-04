@@ -5,21 +5,12 @@ Version is still not stable and wrong configuration can lead to frozen system
 
 Tested on under hass.io ver. 0.93.2 
 
-Many thanks to 
-
-VDRainer    https://github.com/VDRainer
-ballob      https://github.com/balloob
-
-authors of input_datetime, I used for inspiration
-
-https://github.com/home-assistant/home-assistant/tree/dev/homeassistant/components/input_datetime
 
 Releaes:
 
 https://github.com/JiriKursky/Hass.io_CZ_SK_custom_components/releases
-b'{"StatusSNS":{"Time":"2019-06-03T18:21:41",
-"ENERGY":{"TotalStartTime":"2019-04-07T10:55:27",
-"Total":54.772,"Yesterday":1.748,"Today":0.961,"Power":0,"ApparentPower":0,"ReactivePower":0,"Factor":0.00,"Voltage":0,"Current":0.000}}}'
+
+Version 4.6.2019
 
 """
 
