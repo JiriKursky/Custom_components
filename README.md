@@ -26,7 +26,9 @@ turnoffon:
 ```
 
 Component automatically create *turnoffon.filtration* - main (parent for controlling) and *turnoffon.filtration_01* , *turnoffon.filtration_02* (children). "Automation is automatically" in component
+
 You can stop calling turn_on/turn_off with condition explained below or with state = 'off' of parent entity.
+
 That's all!
 
 
