@@ -1,46 +1,45 @@
-# Časovač pro řízení filtrace nebo čehokoli a vůbec
-Testováno na *hass.io* ver. 0.93.2 
-Navazuje na původní [python_script verzi](https://github.com/JiriKursky/Hass.io_CZ_SK), která byla šílená na konfiguraci.
-V tomto případě stačí jen stáhnout komponentu a provést konfiguraci. Žádné *automations.yaml* mimo volané entity k zapnutí a vypnutí zařízení.
+# Simple defining several timers for controlling devices during day
+For instance filtration in swimming pool
+Tested on *hass.io* ver. 0.93.2 
+> **Warning:**
+> Still not absolutely safe with bad config. Be sure that you backup your HA.
 
-> **Upozornění:**
-_Prosím pozor na verzi z 2.6.2019. Oproti předchozí je změna ve tvorbě entit, kde se místo přidání k základní připojovalo k enitě _1, _2 teď je _01, _02. Nemá to vliv, pokud jste to nevyužili jako zobrazení state. Vzhledem k tomu, že jsem nepřítelem těchto změn, slibuji, že dále již budu zachovávat kompatibilitu.
+Installation: 
+1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy files 
+2. Change your *configuration.yaml*. Platform *turnoffon*
 
-> **Upozornění:**
-> Konfigurace není úplně blbovzdorná, i když jsem to testoval, může shodit systém.
-Kde se může stát chyba je v konfiguraci, proto si zazálohujte *configuration.yaml* než do něj sáhnete. Doporučuji mít zvenku přístup na soubory pomocí [Samby](https://www.home-assistant.io/addons/samba/) nebo [SSH](https://www.home-assistant.io/addons/ssh/). Přinejhorším vrátíte zálohu konfigurace nebo smažete komponentu *turnoffon* ve složce *config/custom_components*.
+> Basically app check intervals each minutesProgram se chová tak, že v definovaný interval volá každou minutu službu *turn_on*, mimo něj *turn_off*.
 
-Pro instalaci potřebujete následující znalosti: 
-1. Vytvořit složku *turnoffon* ve složce *config/custom_components* soubory, který naleznete [zde](https://github.com/JiriKursky/Hass.io_CZ_SK_custom_components/tree/master/turnoffon)
-2. Upravit soubor *configuration.yaml*. (Jak na to, naleznete na youtube, například [zde](https://youtu.be/7mhFcJf6WqQ))
+Exapmle of turn_on/turn_of of filtration in intervals:
+10:20 - 20 minutes
+17:00 - 20:50
 
-> Program se chová tak, že v definovaný interval volá každou minutu službu *turn_on*, mimo něj *turn_off*.
+In these intervals will each minute calling service *turn_on* - *input_boolean.filtration". Outside then *turn_off*. This helps with restart of HA etc.
 
-Minimalistické řešení. Filtrace bude ve dvou intervalech 10:20 - 20 minut a pak od 17:00 do 20:50.
-Zapíná se a vypíná entita *input_boolean.filtrace_zapni*
-Příklad co přidat do *configuration.yaml*:
+Add to your *configuration.yaml*
 ```yaml
 turnoffon:
-    filtrace:
-      action_entity_id: input_boolean.filtrace_zapni
+    filtration:
+      action_entity_id: input_boolean.filtration
       timers: { "10:20":20, "17:00":"20:50" }      
 ```
-Toť vše.
+Compomnent automatically create *turnoffon.filtration* - main (parent for controlling) and *turnoffon.filtration_01* (child). "Automation is automatically" in component
+That's all!
 
-Složitější řešení - několik intervalů
+*You can use more complex solution with several parents and their children*
 *configuration.yaml*:
 
 ```yaml
 turnoffon:
-    filtrace:
-      action_entity_id: input_boolean.filtrace_zapni
+    filtration:
+      action_entity_id: input_boolean.filtration
       timers: { "6:10":50, "10:10":30, "12:00":30, "13:10":2, "15:00":20, "17:00":20, "18:00":50, "20:00":30, "21:20":5 }      
       condition_run: input_boolean.filtrace_timer
-    cerpadlo:
-      action_entity_id: input_boolean.cerpadlo_zapni
+    pump:
+      action_entity_id: input_boolean.pump
       timers: { "6:05":15, "07:00":15, "08:05":15, "08:45":15, "09:30":15, "10:15":15, "14:00":15, "16:05":15, "18:00":15, "19:00":15, "20:15":15, "21:05":15, "22:15":15, "22:55":15 }      
       condition_run: input_boolean.cerpadlo_timer
-    postrik_1:
+    sprinlger_1:
       action_entity_id: input_boolean.postrikovac_1
       name: Spodek
       timers: { "12:00":"16:00","21:00":"22:00" }      
