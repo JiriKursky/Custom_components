@@ -6,16 +6,16 @@ Tested on *hass.io* ver. 0.93.2
 > Still not absolutely safe for wrong config. Be sure that you backup your HA.
 
 Installation: 
-1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy files 
+1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy [files](https://github.com/JiriKursky/Custom_components/tree/master/turnoffon)
 2. Change your *configuration.yaml*. Platform *turnoffon*
 
-Example of turn_on/turn_of of filtration in intervals:
+Example of turn_on/turn_off of filtration in intervals:
 10:20 - 20 minutes
 17:00 - 20:50
 
 In these intervals will each minute calling service *turn_on* - *input_boolean.filtration". Outside then *turn_off*. 
 
-You can stop calling with condition explained below or with state = 'off' of parent entity.
+
 
 Add to your *configuration.yaml*
 ```yaml
@@ -24,10 +24,13 @@ turnoffon:
       action_entity_id: input_boolean.filtration
       timers: { "10:20":20, "17:00":"20:50" }      
 ```
+
 Component automatically create *turnoffon.filtration* - main (parent for controlling) and *turnoffon.filtration_01* , *turnoffon.filtration_02* (children). "Automation is automatically" in component
+You can stop calling turn_on/turn_off with condition explained below or with state = 'off' of parent entity.
 That's all!
 
-*You can use more complex solution with several parents and their children*
+
+*Example of more complex solution with several parents and their children*
 *configuration.yaml*:
 
 ```yaml
