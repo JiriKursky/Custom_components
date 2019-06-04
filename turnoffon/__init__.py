@@ -1,14 +1,10 @@
 """
 Component for controlling devices in regular time
 
-Version is still not stable and wrong configuration can lead to frozen system
+Version is still not absolutely stable and wrong configuration can lead to frozen system
 
 Tested on under hass.io ver. 0.93.2 
 
-
-Releaes:
-
-https://github.com/JiriKursky/Hass.io_CZ_SK_custom_components/releases
 
 Version 4.6.2019
 
