@@ -1,5 +1,5 @@
 # Simple defining several timers for controlling devices during day
-For instance filtration in swimming pool
+For instance controlling of filtration in swimming pool
 
 Tested on *hass.io* ver. 0.93.2 
 > **Warning:**
@@ -73,7 +73,7 @@ turnoffon:
       #
       timers: { "6:10":50, "10:10":30, "12:00":30, "13:10":2, "15:00":20, "17:00":20, "18:00":50, "20:00":30, "21:20":5 }      
       # Definition turn_on intervals 
-      # "6:10":50 start at 6:10 for 50 minutes - do not exceed 59 minutes! do not put commas etc 
+      # "6:10":50 start at 6:10 for 50 minutes - do not exceed 59 minutes! do not put commas etc. 
       # warning do not use "24:00"
       # ----------------
       # Second possibilty of define timer "6:10":"8:00" 
