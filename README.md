@@ -2,7 +2,7 @@
 For instance filtration in swimming pool
 Tested on *hass.io* ver. 0.93.2 
 > **Warning:**
-> Still not absolutely safe with bad config. Be sure that you backup your HA.
+> Still not absolutely safe for wrong config. Be sure that you backup your HA.
 
 Installation: 
 1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy files 
