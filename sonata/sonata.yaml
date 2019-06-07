@@ -1,0 +1,26 @@
+user: access
+password: !secret password_mqtt
+sonoff:
+    filtrace:
+      url: 192.168.0.54
+      name: Filtrace sonoff
+      control: input_boolean.filtrace_zapni
+    televize:
+      name: TV sonoff
+      url: 192.168.0.55      
+    subwoofer:
+      name: Subwoofer
+      url: 192.168.0.57    
+sonoff_sensor:
+    cerpadlo:
+      url: 192.168.0.52
+      name: Čerpadlo sonoff
+      control: input_boolean.cerpadlo_zapni
+      sensor_current: sensor.okamzity_proud_cerpadlo
+    bazen_svetlo:
+      url: 192.168.0.56
+      name: Bazen_svetlo sonoff
+      control: input_boolean.bazen_svetlo_zapni
+      sensor_temperature: sensor.teplota_bazen
+
+  
