@@ -342,9 +342,7 @@ class sonoff_sensor(sonoff_basic):
                      return False
                 content = ret[R_CONTENT]
                 sensor_entity_id = sensor[ATTR_ENTITY_ID]
-                value = self._json_key_value(sensor_pars[S_VALUE], content)                
-                _LOGGER.info("Vysledek")
-                _LOGGER.info(content)
+                value = self._json_key_value(sensor_pars[S_VALUE], content)                                
                 self.hass.states.async_set(sensor_entity_id, value, { ATTR_UNIT_OF_MEASUREMENT: sensor_pars[S_UNIT] })
         return True
                 
