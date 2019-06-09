@@ -18,8 +18,7 @@ in *configuration.yaml* section *switches*
     subwoofer:
       friendly_name: Subwoofer
       ip_address: 192.168.1.57        
-```yaml
-
+```
 In case of sensors. Just now supporting DS18B20 for temperature and current.
 
 Sensors
@@ -38,4 +37,4 @@ Sensors
       friendly_name: Subwoofer current      
       sensor_type:
         - current                  
-```yaml
+```
