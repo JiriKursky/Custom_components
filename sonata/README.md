@@ -30,11 +30,9 @@ Sensors
     filtration:      
       ip_address: 192.168.1.54
       friendly_name: Temperature
-      sensor_type: 
-        - temperature    
+      sensor_type: temperature    
     subwoofer:      
       ip_address: 192.168.1.57
       friendly_name: Subwoofer current      
-      sensor_type:
-        - current                  
+      sensor_type: current                  
 ```
