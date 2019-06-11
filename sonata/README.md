@@ -34,3 +34,4 @@ Sensors
       friendly_name: Subwoofer current      
       sensor_type: current                  
 ```
+In case of issues report it [here](https://github.com/JiriKursky/Hass.io_CZ_SK_custom_components/issues)
