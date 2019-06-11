@@ -6,11 +6,11 @@ Installation:
 1. Create sub-folder *sonata* in folder *config/custom_components* and simply copy all [files](https://github.com/JiriKursky/Custom_components/tree/master/sonata)
 2. Change your *configuration.yaml*. Platform *turnoffon*
 
+You can completely switch off MQTT on your Tasmonta device
+
 in *configuration.yaml* section *switches*
 ```yaml
 - platform: sonata
-  username: access
-  password: !secret password_mqtt
   switches:
     filtration:
       ip_address: 192.168.1.54
@@ -24,8 +24,6 @@ In case of sensors. Just now supporting DS18B20 for temperature and current.
 Sensors
 ```yaml
 - platform: sonata
-  username: access
-  password: !secret password_mqtt
   sensors:
     filtration:      
       ip_address: 192.168.1.54
