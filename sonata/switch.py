@@ -12,7 +12,6 @@ from datetime import timedelta
 from homeassistant.core import split_entity_id
 from homeassistant.helpers.event import async_call_later, async_track_point_in_utc_time
 
-
 DOMAIN = 'sonata'
 ENTITY_ID_FORMAT = 'switch.{}'
 
@@ -21,7 +20,6 @@ if os.path.isdir('/config/custom_components/'+DOMAIN):
 
 from http_class import httpClass
 from sonata_const import SENSORS, S_UNIT, S_VALUE, S_CMND, S_SCAN_INTERVAL
-
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,19 +30,19 @@ SWITCH_SCHEMA = vol.Schema({
 })
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_USERNAME): cv.string,    
-    vol.Optional(CONF_PASSWORD): cv.string,
+    vol.Optional(CONF_USERNAME, default = ''): cv.string,    
+    vol.Optional(CONF_PASSWORD, default = ''): cv.string,
     vol.Optional(CONF_SWITCHES, default={}):
         cv.schema_with_slug_keys(SWITCH_SCHEMA),
 })
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Awesome Light platform."""
+    """Set up the Sonata platform - switches."""
  
     # Assign configuration variables.
     # The configuration check takes care they are present.
 
-    username = config[CONF_USERNAME]
+    username = config.get(CONF_USERNAME)
     password = config.get(CONF_PASSWORD)
 
     switches = config.get(CONF_SWITCHES)
@@ -52,7 +50,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     entities = []
     for object_id, pars in switches.items():        
         http_class = httpClass(pars[CONF_IP_ADDRESS], username, password)        
-        entity = Sonoff(object_id, pars[CONF_FRIENDLY_NAME], http_class)
+        entity = Sonoff(object_id, pars.get(CONF_FRIENDLY_NAME), http_class)
         entities.append(entity)
     add_entities(entities)
 

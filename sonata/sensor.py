@@ -7,7 +7,8 @@ import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.helpers.entity import Entity
-from homeassistant.const import (CONF_PASSWORD, CONF_USERNAME,  CONF_FRIENDLY_NAME, CONF_IP_ADDRESS, DEVICE_CLASS_POWER, CONF_SENSORS, CONF_SENSOR_TYPE)
+from homeassistant.const import (CONF_PASSWORD, CONF_USERNAME,  CONF_FRIENDLY_NAME, CONF_IP_ADDRESS, DEVICE_CLASS_POWER, 
+    CONF_SENSORS, CONF_SENSOR_TYPE, CONF_ICON)
 
 DOMAIN = 'sonata'
 ENTITY_ID_FORMAT = 'sensor.{}'
@@ -18,46 +19,45 @@ if os.path.isdir('/config/custom_components/'+DOMAIN):
 
 from http_class import httpClass
 from timer_class import TimerJaroslavaSoukupa
-from sonata_const import SENSORS, S_UNIT, S_VALUE, S_CMND, S_SCAN_INTERVAL
+from sonata_const import SENSORS, S_UNIT, S_VALUE, S_CMND, S_SCAN_INTERVAL, S_ICON
 
 # Validation of the user's configuration
 SENSOR_SCHEMA = vol.Schema({
     vol.Required(CONF_IP_ADDRESS): cv.string,    
     vol.Optional(CONF_FRIENDLY_NAME): cv.string,
-    vol.Required(CONF_SENSOR_TYPE, default=[]): [vol.In(SENSORS.keys())]
+    vol.Required(CONF_SENSOR_TYPE): vol.In(SENSORS.keys())
 })
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_USERNAME): cv.string,    
-    vol.Optional(CONF_PASSWORD): cv.string,
+    vol.Optional(CONF_USERNAME, default = ''): cv.string,    
+    vol.Optional(CONF_PASSWORD, default = ''): cv.string,
+    vol.Optional(CONF_ICON, default = ''): cv.string,
     vol.Optional(CONF_SENSORS, default={}):
         cv.schema_with_slug_keys(SENSOR_SCHEMA),
 })
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Awesome Light platform."""
+    """Set up the sonata sensors."""
  
     # Assign configuration variables.
     # The configuration check takes care they are present.
 
-    username = config[CONF_USERNAME]
+    username = config.get(CONF_USERNAME)
     password = config.get(CONF_PASSWORD)
-
     sensors = config.get(CONF_SENSORS)
     
     entities = []
     for object_id, pars in sensors.items():        
-        http_class = httpClass(pars[CONF_IP_ADDRESS], username, password)        
-        for sensor_type in pars.get(CONF_SENSOR_TYPE):
-            entity = SonoffSensor(hass, object_id, pars[CONF_FRIENDLY_NAME], sensor_type, http_class)
-            entities.append(entity)
+        http_class = httpClass(pars[CONF_IP_ADDRESS], username, password)                
+        entity = SonoffSensor(hass, object_id, pars.get(CONF_FRIENDLY_NAME), pars.get(CONF_SENSOR_TYPE), pars.get(CONF_ICON), http_class)
+        entities.append(entity)
     add_entities(entities)
 
 class SonoffSensor(Entity):
     """Representation of a Sonoff device sensor."""
 
-    def __init__(self, hass, object_id, name, sensor_type, http_class):        
+    def __init__(self, hass, object_id, name, sensor_type, icon, http_class):        
         """Initialize the sensor."""
         self._name = name
         self.entity_id = ENTITY_ID_FORMAT.format(object_id+'_'+sensor_type)
@@ -69,14 +69,34 @@ class SonoffSensor(Entity):
         self._unit_of_measurement = SENSORS[sensor_type][S_UNIT]
         self._cmnd = SENSORS[sensor_type][S_CMND]
         self._state = None
-        self._tjs = TimerJaroslavaSoukupa(hass, self, self.update, self._interval)
+        if not icon:
+            icon = SENSORS[sensor_type][S_ICON]
+        self._icon = icon        
+        self._tjs = None
         
+        
+    @property
+    def should_poll(self):
+        """If entity should be polled."""
+        # Has its own timer for refreshing
+        return False
 
     @property
     def name(self):
         """Return the name of the sensor."""
         return self._name
 
+    @property
+    def icon(self):
+        """Return the icon of the sensor."""
+        return self._icon
+
+    async def async_added_to_hass(self):        
+        """Run when entity about to be added."""
+        await super().async_added_to_hass()        
+        if self._tjs is None:
+            self._tjs = TimerJaroslavaSoukupa(self.hass, self, self.update, self._interval)
+    
     @property
     def state(self):
         """Return the state of the sensor."""
@@ -93,6 +113,8 @@ class SonoffSensor(Entity):
         return self._unit_of_measurement
 
     def _json_key_value(self, def_array, value):
+        """ Mapping of returned values. Defined in sonata_const.py """
+        # Maybe can be done by Schema - no success how to do
         if value is None:
             return None        
         for key in def_array:
@@ -104,7 +126,9 @@ class SonoffSensor(Entity):
 
     def update(self):
         """Get the latest data from the sensor."""
-        value = self._get_value()
+        value = self._http_class.get_raw_response(self._cmnd)                    
+        if value is not None :                                        
+            value = self._json_key_value(SENSORS[self._sensor_type][S_VALUE], value)                                            
         if value is None:
             self._state = None
             self._is_available = False
@@ -113,11 +137,3 @@ class SonoffSensor(Entity):
         self._state = value
         self._is_available = True
         self.async_schedule_update_ha_state()
-
-    def _get_value(self):
-        ret_val = None        
-        data = self._http_class.get_raw_response(self._cmnd)                    
-        if data is not None :                                
-            # @TODO need to investigate, how to use it
-            ret_val = self._json_key_value(SENSORS[self._sensor_type][S_VALUE], data)                                            
-        return ret_val        
