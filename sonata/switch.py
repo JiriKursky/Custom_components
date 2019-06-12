@@ -49,7 +49,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     
     entities = []
     for object_id, pars in switches.items():        
-        http_class = httpClass(pars[CONF_IP_ADDRESS], username, password)        
+        http_class = httpClass(hass, pars[CONF_IP_ADDRESS], username, password)        
         entity = Sonoff(object_id, pars.get(CONF_FRIENDLY_NAME), http_class)
         entities.append(entity)
     add_entities(entities)
