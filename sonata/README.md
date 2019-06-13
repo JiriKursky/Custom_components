@@ -13,11 +13,11 @@ in *configuration.yaml* section *switches*
 - platform: sonata
   switches:
     filtration:
-      ip_address: 192.168.1.54
+      ip_address: xxx.xxx.x.xx # ip address sonnoff controlling filtration
       friendly_name: Filtration sonoff          
     subwoofer:
       friendly_name: Subwoofer
-      ip_address: 192.168.1.57        
+      ip_address: xxx.xxx.x.xx # ip address sonnoff controlling subwoofer        
 ```
 In case of sensors. Just now supporting DS18B20 for temperature and current.
 
@@ -26,11 +26,11 @@ Sensors
 - platform: sonata
   sensors:
     filtration:      
-      ip_address: 192.168.1.54
+      ip_address: xxx.xxx.x.xx 
       friendly_name: Temperature
       sensor_type: temperature    
     subwoofer:      
-      ip_address: 192.168.1.57
+      ip_address: xxx.xxx.x.xx
       friendly_name: Subwoofer current      
       sensor_type: current                  
 ```
