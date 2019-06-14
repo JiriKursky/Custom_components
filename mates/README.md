@@ -3,7 +3,7 @@
 Tested on hass.io ver. 0.93.2, 0.94.0
 
 Installation: 
-1. Create sub-folder *sonata* in folder *config/custom_components* and simply copy all [files](https://github.com/JiriKursky/Custom_components/tree/master/sonata)
+1. Create sub-folder *sonata* in folder *config/custom_components* and simply copy all [files](https://github.com/JiriKursky/Custom_components/tree/master/mates)
 2. Change your *configuration.yaml*. Platform *turnoffon*
 
 You can completely switch off MQTT on your Tasmonta device
