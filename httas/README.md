@@ -5,13 +5,14 @@ You can completely switch off MQTT on your Tasmota Sonoff device
 Choose yourself:
 
 Advantages of this solution:
+- simple configuration
 - no external server
 - no port forwarding
 
 Disadvantages:
 - no professional solution
-- support only from my side
 - not standard definition like MQTT
+- support only from my side and this is only sharing what I am using myself
 
 in *configuration.yaml* section *switches*
 ```yaml
