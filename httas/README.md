@@ -1,4 +1,4 @@
-# Htta
+# Httas
 
 You can completely switch off MQTT on your Tasmonta device
 
