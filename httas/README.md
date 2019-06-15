@@ -2,6 +2,17 @@
 
 You can completely switch off MQTT on your Tasmota Sonoff device
 
+Choose yourself:
+
+Advantages of this solution:
+- no external server
+- no port forwarding
+
+Disadvantages:
+- no professional solution
+- support only from my side
+- not standard definition like MQTT
+
 in *configuration.yaml* section *switches*
 ```yaml
 - platform: httas
