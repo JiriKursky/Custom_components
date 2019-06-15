@@ -1,6 +1,6 @@
 # Httas
 
-You can completely switch off MQTT on your Tasmonta device
+You can completely switch off MQTT on your Tasmota Sonoff device
 
 in *configuration.yaml* section *switches*
 ```yaml
