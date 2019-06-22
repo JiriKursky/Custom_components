@@ -1,34 +1,32 @@
+""" Using switch with direct http """
 import logging
-import os
-import sys
-
+import async_timeout
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
-
 from homeassistant.components.switch import (SwitchDevice, PLATFORM_SCHEMA)
-from homeassistant.const import (CONF_PASSWORD, CONF_USERNAME, CONF_SWITCHES, CONF_FRIENDLY_NAME, CONF_IP_ADDRESS, CONF_SCAN_INTERVAL, DEVICE_CLASS_POWER)
-from datetime import timedelta
-from homeassistant.core import split_entity_id
-from homeassistant.helpers.event import async_call_later, async_track_point_in_utc_time
+from homeassistant.const import (CONF_PASSWORD, CONF_USERNAME, CONF_SWITCHES, CONF_FRIENDLY_NAME,
+     CONF_IP_ADDRESS, CONF_SCAN_INTERVAL, DEVICE_CLASS_POWER)
+from homeassistant.helpers.event import async_call_later
+from inspect import currentframe, getframeinfo
 
 DOMAIN = 'httas'
 ENTITY_ID_FORMAT = 'switch.{}'
 
-if os.path.isdir('/config/custom_components/'+DOMAIN):
-    sys.path.append('/config/custom_components/'+DOMAIN)
-
-from http_class import httpClass
-from httas_const import SENSORS, S_UNIT, S_VALUE, S_CMND
-from timer_class import TimerJaroslavaSoukupa
+R_POWER = 'POWER'                   # Return json
+CMND_POWER = 'POWER'                # Get info if is ON/OFF
+CMND_POWER_ON = 'Power%20On'        # Comnmand to turn on
+CMND_POWER_OFF = 'Power%20Off'      # Comnmand to turn off
 
 _LOGGER = logging.getLogger(__name__)
+HTTP_TIMEOUT = 5
 
 # Validation of the user's configuration
 SWITCH_SCHEMA = vol.Schema({
     vol.Required(CONF_IP_ADDRESS): cv.string,    
     vol.Optional(CONF_FRIENDLY_NAME): cv.string,
-    vol.Optional(CONF_SCAN_INTERVAL): cv.string
+    vol.Optional(CONF_SCAN_INTERVAL, default = 30): vol.All(cv.positive_int, vol.Range(min=3, max=59))
 })
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
@@ -39,7 +37,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
 })
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Sonata platform - switches."""
+    """Set up the platform - switches."""
  
     # Assign configuration variables.
     # The configuration check takes care they are present.
@@ -50,27 +48,35 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     switches = config.get(CONF_SWITCHES)    
     
     entities = []
-    for object_id, pars in switches.items():        
-        scan_interval = None
-        conf_scan_interval =  pars.get(CONF_SCAN_INTERVAL)
-        if conf_scan_interval is not None:
-            try:
-                scan_interval= timedelta(seconds=conf_scan_interval)
-            except:
-                scan_interval = None
-        http_class = httpClass(hass, pars[CONF_IP_ADDRESS], username, password)                
-        entity = Sonoff(object_id, pars.get(CONF_FRIENDLY_NAME), http_class, scan_interval)
+    for object_id, pars in switches.items():                        
+        base_url = "http://{}/cm?".format(pars[CONF_IP_ADDRESS])
+        # username and passord is using only when protected internal
+        if len(username)>0:
+            base_url += '&user='+username
+        if len(password)>0:
+            base_url += '&password='+password
+
+        base_url += '&cmnd='    
+        entity = Sonoff(object_id, pars.get(CONF_FRIENDLY_NAME), base_url, pars)
         entities.append(entity)
     add_entities(entities)
 
 class Sonoff(SwitchDevice):
-    def __init__(self, object_id, name, http_class, scan_interval):       
+    """ Main entity definition. There is only this one """
+    def __init__(self, object_id, name, base_url, pars):       
         self.entity_id = ENTITY_ID_FORMAT.format(object_id)
         self._name = name
-        self._http_class = http_class
-        self._is_on = self._http_class.get_state_boolean()
-        self._scan_interval = None
-        self._tjs = None
+        self._base_url = base_url # necessary to put there command
+        self._is_on = False
+        self._scan_interval = pars.get(CONF_SCAN_INTERVAL) # checked in vol for value between 3 and 59
+        self._ip_address = pars[CONF_IP_ADDRESS]      
+
+    def _debug(self, s):
+        cf = currentframe()
+        line = cf.f_back.f_lineno
+        if s is None:
+             s = ''
+        _LOGGER.debug("line: {} ip_address: {} msg: {}".format(line, self._ip_address, s))
 
     @property
     def name(self):
@@ -81,36 +87,74 @@ class Sonoff(SwitchDevice):
     def should_poll(self):
         """If entity should be polled."""
         # It can have its own timer according configuration
-        return self._scan_interval is None
+        return False
+    
+    def _to_get(self, cmnd):
+        """ Get command including URL """
+        return  self._base_url + cmnd        
+
+    async def _send(self, cmnd):
+        self._debug("Command: {}".format(cmnd))
+        websession = async_get_clientsession(self.hass)                
+        value = None
+        try:
+            with async_timeout.timeout(HTTP_TIMEOUT):            
+                response = await websession.post(self._to_get(cmnd))                        
+            if response is not None:
+                try:                
+                    value = await response.json()            
+                except:            
+                    value = None
+        except:
+            self._debug("Exception")
+             
+        if value is None:
+            return False
+        else:
+            self._debug("returned with success power: {}".format(value[R_POWER]))
+            self._is_on = value[R_POWER] == 'ON'                  
+            self.async_schedule_update_ha_state()
+            return True                                                            
+        
+    async def _do_update(self):
+        """ Returning current state of sensor """
+        self._debug("do update")
+        if await self._send(CMND_POWER):
+            self._debug("scan interval: {}".format(self._scan_interval))
+            async_call_later(self.hass, self._scan_interval, self._do_update())        
+        else:
+            self._debug("no success scan interval reduced to 5 seconds")
+            async_call_later(self.hass, 5, self._do_update())                
+        return True
 
     async def async_added_to_hass(self):        
         """Run when entity about to be added."""
         await super().async_added_to_hass()                
-        if (self._tjs is None) and (self._scan_interval is not None):
-            self._tjs = TimerJaroslavaSoukupa(self.hass, self, self.update, self._scan_interval)
-
-    def update(self) :
-        """ Called if scan_interval != none only """
-        self._is_on = self._http_class.get_state_boolean()
-        self.async_schedule_update_ha_state()
+        self._debug("entity added to hass and starting update")
+        await self._do_update()
+    
+    def _send_cmnd(self, cmnd):
+        """ Sending to async with delay """
+        self._debug("Sending later: {}".format(cmnd))
+        async_call_later(self.hass, 0.2, self._send(cmnd))        
 
     @property
     def is_on(self):
-        """If the switch is currently on or off."""
-        _LOGGER.debug("get_state")
-        self._is_on = self._http_class.get_state_boolean()
-        return self._is_on
+        """If the switch is currently on or off."""        
+        return self._is_on        
 
     def turn_on(self, **kwargs):
         """Turn the switch on."""
-        self._http_class.turn_on()        
         self._is_on = True
+        self.async_schedule_update_ha_state()
+        self._send_cmnd(CMND_POWER_ON)        
 
     def turn_off(self, **kwargs):
         """Turn the switch off."""
-        self._http_class.turn_off()        
         self._is_on = False
-    
+        self.async_schedule_update_ha_state()
+        self._send_cmnd(CMND_POWER_OFF)        
+        
     @property
     def device_class(self):
         """Return the class of this device, from component DEVICE_CLASSES."""
