@@ -36,6 +36,7 @@ S_ICON = 'ICON'
 ST_TEMPERATURE = 'temperature'
 ST_CURRENT = 'current'
 ST_VOLTAGE = 'voltage'
+MAX_LOST = 5                        # Can be lost in commincation
 
 # definition of type of sensors
 SENSORS = {
@@ -123,6 +124,8 @@ class SonoffSensor(Entity):
         self._icon = icon                
         self._next_expiration = None
         self._ip_address = pars[CONF_IP_ADDRESS]      
+        self._lost = 0
+        self._lost_informed = False
         
     def _debug(self, s):
         cf = currentframe()
@@ -170,12 +173,26 @@ class SonoffSensor(Entity):
             
         if value is None:
             self._state = None
+            scan_interval = 5
             self._is_available = False
+            if self._lost > MAX_LOST:
+                scan_interval = 59
+                if not self._lost_informed:
+                    self.hass.components.persistent_notification.create(
+                        "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),
+                        title=DOMAIN)                
+                    self._lost_informed = True
+            else:
+                self._lost += 1
             self.async_schedule_update_ha_state()
-            self._debug("no success scan interval reduced to 5 seconds")
-            self.hass.helpers.event.async_call_later(5, self._do_update())        
+            self._debug("no success scan interval reduced to {} seconds".format(scan_interval))
+            self.hass.helpers.event.async_call_later(scan_interval, self._do_update())        
             return False
-        
+        self._lost = 0
+        if self._lost_informed:
+            self.hass.components.persistent_notification.create(
+                "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
+                title=DOMAIN)                                
         value = self._json_key_value(SENSORS[self._sensor_type][S_VALUE], value)                                            
         self._state = value
         self._is_available = True

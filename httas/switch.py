@@ -18,6 +18,7 @@ R_POWER = 'POWER'                   # Return json
 CMND_POWER = 'POWER'                # Get info if is ON/OFF
 CMND_POWER_ON = 'Power%20On'        # Comnmand to turn on
 CMND_POWER_OFF = 'Power%20Off'      # Comnmand to turn off
+MAX_LOST = 5                        # Can be lost in commincation
 
 _LOGGER = logging.getLogger(__name__)
 HTTP_TIMEOUT = 5
@@ -70,6 +71,8 @@ class Sonoff(SwitchDevice):
         self._is_on = False
         self._scan_interval = pars.get(CONF_SCAN_INTERVAL) # checked in vol for value between 3 and 59
         self._ip_address = pars[CONF_IP_ADDRESS]      
+        self._lost = 0
+        self._lost_informed = False
 
     def _debug(self, s):
         cf = currentframe()
@@ -106,12 +109,17 @@ class Sonoff(SwitchDevice):
                 except:            
                     value = None
         except:
-            self._debug("Exception")
-             
+            self._debug("Exception")             
         if value is None:
             return False
         else:
             self._debug("returned with success power: {}".format(value[R_POWER]))
+            self._lost = 0
+            if self._lost_informed:
+                self.hass.components.persistent_notification.create(
+                        "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
+                        title=DOMAIN)                
+            self._lost_informed = False
             self._is_on = value[R_POWER] == 'ON'                  
             self.async_schedule_update_ha_state()
             return True                                                            
@@ -123,8 +131,18 @@ class Sonoff(SwitchDevice):
             self._debug("scan interval: {}".format(self._scan_interval))
             async_call_later(self.hass, self._scan_interval, self._do_update())        
         else:
-            self._debug("no success scan interval reduced to 5 seconds")
-            async_call_later(self.hass, 5, self._do_update())                
+            scan_interval = 5
+            if self._lost > MAX_LOST:
+                scan_interval = 59
+                if not self._lost_informed:
+                    self.hass.components.persistent_notification.create(
+                        "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),
+                        title=DOMAIN)                
+                    self._lost_informed = True
+            else:
+                self._lost += 1
+            self._debug("no success scan interval is now {} seconds, losted {}".format(scan_interval, self._lost))            
+            async_call_later(self.hass, scan_interval, self._do_update())                
         return True
 
     async def async_added_to_hass(self):        
