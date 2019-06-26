@@ -83,9 +83,9 @@ turnoffon:
       # App is testing this for 'on' or 'off'. You will stop automatisation. I am using for instance for sprinkler in rainy days      
 ```
 Next feature
-you can add force_turn: false (default is true). It will lead that HA will not repeating turn_on/turn_off each minute. It is useful if you are using for instance device with "beep" during setting on/off. HA is reading current state of entity it means if it shoulf be off and is on it is sending command turn_off. This you should have in your mind if you want manually control device also. In that case I advice to add input_boolean as action_entity_id and linked via automaization to device. In next version will be possible to do that without automatization.
+you can add force_turn: false (default is true). It will lead that HA will not repeating turn_on/turn_off each minute. It is useful if you are using for instance device with "beep" during setting on/off. HA is reading current state of entity it means if it shoulf be off and is on it is sending command turn_off. This you should have in your mind if you want manually control device also. In that case I advice to add input_boolean as action_entity_id and linked
 
-example:
+example of force run:
 
 ```yaml
 turnoffon:
@@ -96,4 +96,55 @@ turnoffon:
       force_run: false 
 ```    
 
-You can find useful attributes in entities. There are several services. If somebody need I am going to publish however I do not want spend time with that now.
+# Full example of climate controlling
+
+```yaml
+- platform: broadlink
+  host: 192.168.X.X
+  mac: "ma:c0:ad:dr:es:s0"
+  type: rm2_pro_plus
+  switches:      
+    climate_cooling:
+      friendly_name: My climate control
+      command_on: 'JgBOAAABKZYUExQ3FRIVNRUTFBMVExQTFTYXNRQ3FBBMWEhURFhIVEhcRFREXNBURFxEVERcRFhEXERY1FBIXNBQSFxAXNRYSFAANBQAAAAAAAAAAAAA='
+      command_off: 'JgBOAAABKJcUExU2FRIUFBMTFRMUExUTFTYUNxQ2FRIVExUTFRMUExQUExMUNxQSFBQTExYSFRIWEhQ3FBIVNhMTFRIVNxUTFAANBQAAAAAAAAAAAAA='
+
+input_boolean:
+    climate_control:
+        name: Ctl climate
+    climate_sensor:
+        name: Temp to control
+turnoffon:
+    climate:
+      action_entity_id: input_boolean.climate_control
+      linked_entity_id: switch.climate_cooling
+      name: Climate living room
+      timers: { "8:00":"11:00","21:00":"22:00" }      
+      force_run: false 
+      condition_run: input_boolean.climate_sensor
+```
+What will happened:
+
+if input_boolean.climate_sensor will be off, nothing happened and all off/on will not work
+if input_boolean.climate_sensor is on or you will not put condition_run it will:
+
+in time intervals 8:00-11:00 and 21:00-22:00 will turn_on input_boolean.climate_control, but only once if input_boolean.climate_control
+if input_boolean.climate_control will turn_on, also linked entity switch.climate_cooling will go turn_on and the same in off.
+
+*Why is there linked_entity_id and it is not simply put to action_entity_id like this?*
+```yaml
+turnoffon:
+    climate:
+      action_entity_id: switch.climate_cooling      
+      name: Climate living room
+      timers: { "8:00":"11:00","21:00":"22:00" }      
+      force_run: false 
+      condition_run: input_boolean.climate_sensor
+```
+It will work. However if you want manually switch on between 11:00-21:00 it will during one minute go off. In case of previous solution you can control it and you are able manually switch off in 11:00-21:00.
+
+*Why is there force_run: false?*
+
+If it is missing or force_run: true, each minute it will send turn_on or turn_off to device. In this case if you have action_entity_id: switch.climate_cooling it can beep each minute or doing reset etc. 
+
+
