@@ -2,7 +2,7 @@
 
 You can completely switch off MQTT on your Tasmota Sonoff device
 
-![Sonoff(https://github.com/JiriKursky/Custom_components/blob/master/library/sonoffbasic.jpg)
+![Sonoff](https://github.com/JiriKursky/Custom_components/blob/master/library/sonoffbasic.jpg)
 
 Choose yourself:
 
