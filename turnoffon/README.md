@@ -87,7 +87,7 @@ you can add force_turn: false (default is true). It will lead that HA will not r
 
 example:
 
-```
+```yaml
 turnoffon:
     climate:
       action_entity_id: switch.climate_cooling
