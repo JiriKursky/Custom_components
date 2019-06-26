@@ -2,8 +2,8 @@
 For instance controlling of filtration in swimming pool
 
 Tested on *hass.io* ver. 0.93.2 
-> **Warning:**
-> Still not absolutely safe for wrong config. Be sure that you backup your HA.
+
+This published version is more stable and close done to required standard of HA development rules.
 
 Installation: 
 1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy [files](https://github.com/JiriKursky/Custom_components/tree/master/turnoffon)
@@ -94,6 +94,6 @@ turnoffon:
       name: Climate living room
       timers: { "12:00":"16:00","21:00":"22:00" }      
       force_run: false 
-    
+```    
 
 You can find useful attributes in entities. There are several services. If somebody need I am going to publish however I do not want spend time with that now.
