@@ -10,9 +10,7 @@ Advantages of this solution:
 - no port forwarding
 
 Disadvantages:
-- no professional solution
 - not standard definition like MQTT
-- support only from my side and this is only sharing what I am using myself
 
 in *configuration.yaml* section *switches*
 ```yaml
