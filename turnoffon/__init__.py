@@ -43,13 +43,9 @@ CONF_TIMERS             = 'timers'
 CONF_FORCE_TURN         = 'force_turn'
 CONF_TIMERS_MEMORY      = 'timers_memory'
 CONF_ACTION_ENTITY_ID   = 'action_entity_id'    # what to call as controlling entity during comand_on, comannd_off
+CONF_LINKED_ENTITY_ID    = 'linked_entity_id'      # linked entity_id will be on and off acording CONF_ACTION_ENTITY_ID
 REFRESH_INTERVAL = 59
 SHUT_DOWN = False                               # shutting down on stop HA
-
-# Navratove hodnoty z run_casovac
-R_HASS = 'HASS'
-R_TODO = 'TO_DO'
-R_ENTITY_ID = "ENTITY_ID"
 
 O_PARENT = 'PARENT'
 O_CHILDREN = 'CHILDREN'
@@ -168,6 +164,7 @@ CONFIG_SCHEMA = vol.Schema({
             vol.Required(CONF_TIMERS): kontrolaCasy,
             vol.Optional(CONF_TIMERS_MEMORY): cv.boolean,
             vol.Required(CONF_ACTION_ENTITY_ID): cv.entity_id,            
+            vol.Optional(CONF_LINKED_ENTITY_ID): cv.entity_id,            
             vol.Optional(CONF_CONDITION): cv.entity_id,
             vol.Optional(CONF_NAME): cv.string,
             vol.Optional(CONF_COMMAND_ON, default = SERVICE_TURN_ON): cv.string,
@@ -226,16 +223,7 @@ async def async_setup(hass, config):
         # Push to store
         hass.data[DOMAIN][O_PARENT][object_id] = casovacHlavni        
 
-        # Setting main timer - loop for checking interval
-        """
-        memory = cfg.get(CONF_TIMERS_MEMORY)
-        if memory is None:
-            memory = False
-        if memory:
-            async_call_later(hass, REFRESH_INTERVAL, casovacHlavni.set_to_memory())
-        else:
-            async_call_later(hass, REFRESH_INTERVAL, casovacHlavni.regular_loop())
-        """
+        # Setting main timer - loop for checking interval        
         async_call_later(hass, REFRESH_INTERVAL, casovacHlavni.regular_loop())
         entities.append(casovacHlavni)        
     if not entities:
@@ -254,8 +242,9 @@ async def async_setup(hass, config):
         #----------------------------
         
         # what will be controlled
+        hass = entity.hass
         try:        
-            action_entity = entity.hass.states.get(entity.action_entity_id)
+            action_entity = hass.states.get(entity.action_entity_id)
             target_domain, _ = split_entity_id(action_entity.entity_id)
             to_do = entity.to_do
         except:
@@ -264,20 +253,19 @@ async def async_setup(hass, config):
         
 
         # volam sluzbu, ktera zapne nebo vypne danou entitu               
-                
-        call_service =  ((entity._set_on(to_do) and not is_on(action_entity)) or (not entity._set_on(to_do) and is_on(action_entity))) or entity.force_turn
+        changed_state = ((entity._set_on(to_do) and not is_on(action_entity)) or (not entity._set_on(to_do) and is_on(action_entity)))       
+        call_service =  changed_state or entity.force_turn
         my_debug('>>>>>>>>>>>>> what: {} set_on: {} is_on: {} {} {} <<<<<<<<<<<<<<'.format(call_service, entity._set_on(to_do), is_on(action_entity), entity.force_turn, entity.entity_id))
-                
         
+        if entity.linked_entity_id is not None and changed_state:
+            domain, _ = split_entity_id(entity.linked_entity_id)
+            my_debug("linked entity:{} {} {}".format(target_domain, to_do, entity.linked_entity_id))
+            await hass.services.async_call(domain, to_do, { ATTR_ENTITY_ID: entity.linked_entity_id }, blocking=True)
+
         if call_service:
-            my_debug("calling service {} {} {}".format(target_domain, to_do, action_entity.entity_id))
-                    
-            """
-            state = entity.action_entity_id.get_state()
-            my_debug("Called {} is in state {}".format(calling_entity_id, state))
-            """
+            my_debug("calling service {} {} {}".format(target_domain, to_do, action_entity.entity_id))                                
             # Calling entity to switch off or on
-            await hass.services.async_call(target_domain, to_do, { "entity_id": action_entity.entity_id }, blocking=True)
+            await hass.services.async_call(target_domain, to_do, { ATTR_ENTITY_ID: action_entity.entity_id }, blocking=True)
         else:
             my_debug("entity {} in right state, {} not necessary".format(action_entity.entity_id, to_do))
 
@@ -403,6 +391,7 @@ class CasovacHlavni(TurnonoffEntity):
         self._turn_on = cfg.get(CONF_COMMAND_ON)
         self._turn_off = cfg.get(CONF_COMMAND_OFF)
         self.action_entity_id = cfg.get(CONF_ACTION_ENTITY_ID)
+        self.linked_entity_id = cfg.get(CONF_LINKED_ENTITY_ID)
         self._condition = cfg.get(CONF_CONDITION)
         self.force_turn = cfg.get(CONF_FORCE_TURN)        
         
@@ -447,7 +436,7 @@ class CasovacHlavni(TurnonoffEntity):
                 async_call_later(self.hass, REFRESH_INTERVAL, self.regular_loop())
                 return        
         my_debug("Calling service: {} - {} for: {} ".format(DOMAIN, SERVICE_RUN_CASOVAC, self.entity_id))  
-        await self.hass.services.async_call(DOMAIN, SERVICE_RUN_CASOVAC, { "entity_id": self.entity_id })            
+        await self.hass.services.async_call(DOMAIN, SERVICE_RUN_CASOVAC, { ATTR_ENTITY_ID: self.entity_id })            
         my_debug("asking for call later after {} seconds".format(REFRESH_INTERVAL))        
         async_call_later(self.hass, REFRESH_INTERVAL, self.regular_loop())
     
