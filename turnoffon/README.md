@@ -82,5 +82,18 @@ turnoffon:
       condition_run: input_boolean.filtration_timer
       # App is testing this for 'on' or 'off'. You will stop automatisation. I am using for instance for sprinkler in rainy days      
 ```
+Next feature
+you can add force_turn: false (default is true). It will lead that HA will not repeating turn_on/turn_off each minute. It is useful if you are using for instance device with "beep" during setting on/off. HA is reading current state of entity it means if it shoulf be off and is on it is sending command turn_off. This you should have in your mind if you want manually control device also. In that case I advice to add input_boolean as action_entity_id and linked via automaization to device. In next version will be possible to do that without automatization.
+
+example:
+
+```
+turnoffon:
+    climate:
+      action_entity_id: switch.climate_cooling
+      name: Climate living room
+      timers: { "12:00":"16:00","21:00":"22:00" }      
+      force_run: false 
+    
 
 You can find useful attributes in entities. There are several services. If somebody need I am going to publish however I do not want spend time with that now.
