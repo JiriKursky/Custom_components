@@ -147,4 +147,6 @@ It will work. However if you want manually switch on between 11:00-21:00 it will
 
 If it is missing or force_run: true, each minute it will send turn_on or turn_off to device. In this case if you have action_entity_id: switch.climate_cooling it can beep each minute or doing reset etc. 
 
+*I've changed timers but there are old values*
+You must use service turnoffon.reset_timers
 
