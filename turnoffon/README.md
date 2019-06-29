@@ -1,9 +1,11 @@
 # Simple defining several timers for controlling devices during day
-For instance controlling of filtration in swimming pool
+For instance controlling of filtration in swimming pool, well pump
 
 Tested on *hass.io* ver. 0.93.2 
 
 This published version is more stable and close done to required standard of HA development rules.
+
+![Turnoffon](https://github.com/JiriKursky/Custom_components/blob/master/library/example_pump.JPG)
 
 Installation: 
 1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy [files](https://github.com/JiriKursky/Custom_components/tree/master/turnoffon)
