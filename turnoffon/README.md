@@ -33,7 +33,7 @@ Component automatically create *turnoffon.filtration* - main (parent for control
 
 You can stop calling turn_on/turn_off with condition explained below or with state = 'off' of parent entity.
 
-Each child has there attributes:
+Each child has these attributes:
 
 ![Attributes](https://github.com/JiriKursky/Custom_components/blob/master/library/turnoffon_attr.JPG)
 
