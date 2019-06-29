@@ -31,7 +31,6 @@ You can stop calling turn_on/turn_off with condition explained below or with sta
 
 That's all!
 
-
 *Example of more complex solution with several parents and their children*
 *configuration.yaml*:
 
