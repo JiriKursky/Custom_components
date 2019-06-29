@@ -5,6 +5,8 @@ Tested on *hass.io* ver. 0.93.2
 
 This published version is more stable and close done to required standard of HA development rules.
 
+
+Example of using turnoffon:
 ![Turnoffon](https://github.com/JiriKursky/Custom_components/blob/master/library/example_pump.JPG)
 
 Installation: 
