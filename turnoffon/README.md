@@ -33,6 +33,10 @@ Component automatically create *turnoffon.filtration* - main (parent for control
 
 You can stop calling turn_on/turn_off with condition explained below or with state = 'off' of parent entity.
 
+Each child has there attributes:
+
+![Attributes](https://github.com/JiriKursky/Custom_components/blob/master/library/turnoffon_attr.JPG)
+
 That's all!
 
 *Example of more complex solution with several parents and their children*
@@ -167,4 +171,5 @@ If it is missing or force_run: true, each minute it will send turn_on or turn_of
 *I've changed timers but there are old values*
 
 You must use service turnoffon.reset_timers
+
 
