@@ -3,6 +3,7 @@ filtrace:
   action_entity_id: input_boolean.filtrace
   timers: { "6:10":50, "10:10":30, "12:00":50, "13:10":2, "15:00":20, "16:00":30, "17:00":20, "17:30":20, "18:00":50, "20:00":30, "21:20":5 }        
   condition: input_boolean.filtrace_timer
+  force_turn: false
 cerpadlo:
   name: Čerpadlo
   action_entity_id: input_boolean.cerpadlo
@@ -24,3 +25,9 @@ postrik_4:
   action_entity_id: input_boolean.postrikovac_3
   name: Zadek
   timers: { "10:00":"12:00","22:00":"23:59" }    
+klimatizace:
+  force_turn: false  
+  action_entity_id: input_boolean.klima_chlazeni
+  linked_entity_id: switch.klima_chlazeni
+  name: Klimatizace
+  timers: { "6:50":"7:10", "16:49":1 }    

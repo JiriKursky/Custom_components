@@ -44,6 +44,7 @@ CONF_FORCE_TURN         = 'force_turn'
 CONF_TIMERS_MEMORY      = 'timers_memory'
 CONF_ACTION_ENTITY_ID   = 'action_entity_id'    # what to call as controlling entity during comand_on, comannd_off
 CONF_LINKED_ENTITY_ID    = 'linked_entity_id'      # linked entity_id will be on and off acording CONF_ACTION_ENTITY_ID
+CONF_FORCE_INITIAL      = 'force_initial'
 REFRESH_INTERVAL = 59
 SHUT_DOWN = False                               # shutting down on stop HA
 
@@ -52,7 +53,7 @@ O_CHILDREN = 'CHILDREN'
 
 # Used attributes
 ATTR_START_TIME         = 'start_time'
-ATTR_TIME_DELTA         = 'run_len'
+ATTR_TIME_DELTA         = 'time_delta'
 ATTR_END_TIME           = 'end_time'
 ATTR_LAST_RUN           = 'last_run'
 ATTR_START_TIME_INIT    = 'start_time_init'
@@ -74,24 +75,40 @@ def time_to_string(t_cas):
 
 def string_to_time(s):
     try:
-        return time.strptime(s, '%H:%M')         
+        ret_val = time.strptime(s, '%H:%M')         
     except:
-        return None
+        my_debug("Was not possible to convert string to time: {}".format(s))
+        ret_val = None
+    return ret_val
 
-def prevedCasPar(sCas, praveTed):    
-    def_time = string_to_time(sCas)
-    if def_time is None:
-        return None
-    praveTed = datetime.datetime.now()    
-    return praveTed.replace(hour=def_time.tm_hour, minute=def_time.tm_min, second=0)
+def prevedCasPar(sCas, just_now):    
+    try:
+        def_time = string_to_time(sCas)
+        if def_time is None:
+            ret_val =  None
+        else:
+            just_now = datetime.datetime.now()    
+            ret_val = just_now.replace(hour=def_time.tm_hour, minute=def_time.tm_min, second=0)
+    except:
+        my_debug("Was not possible to convert time: {}".format(sCas))
+        ret_val = None
+    return ret_val
 
 def prevedCas(sCas):
     # String to datetime now
     return prevedCasPar(sCas, datetime.datetime.now())
 
+def get_end_time_delta(start_time, delta):
+    try:
+        ret_val = time_to_string(prevedCas(start_time) + datetime.timedelta(minutes = delta))
+    except: 
+        my_debug("{} delta: {}".format(start_time, delta))
+        ret_val = None
+    return ret_val
+
 def get_end_time(start_time, end_time) :    
     if isinstance(end_time, int):        
-        return time_to_string(prevedCas(start_time) + datetime.timedelta(minutes = end_time))
+        return get_end_time_delta(start_time, end_time)
     return end_time
 
 #-----------------------------------------------
@@ -107,10 +124,10 @@ SERVICE_SET_RUN_CASOVAC_SCHEMA = vol.Schema({
 def has_start_or_end(conf):
     """Check at least date or time is true."""
     if conf[ATTR_TIME_DELTA] and not conf[ATTR_START_TIME]:
-        raise vol.Invalid("In case of delta "+ ATTR_START_TIME + " is required")                            
+        raise vol.Invalid("In case of delta {} is required".format(ATTR_START_TIME))                            
     if conf[ATTR_START_TIME] or conf[ATTR_END_TIME]:
          return conf    
-    raise vol.Invalid("Entity needs at least a " + ATTR_START_TIME + "and a " + ATTR_END_TIME + " or a " + ATTR_TIME_DELTA)        
+    raise vol.Invalid("Entity needs at least a {} and {} or {}".format(ATTR_START_TIME, ATTR_END_TIME, ATTR_TIME_DELTA))
 
 SERVICE_SET_TIME = 'set_time'
 SERVICE_SET_TIME_SCHEMA = vol.Schema({
@@ -170,6 +187,7 @@ CONFIG_SCHEMA = vol.Schema({
             vol.Optional(CONF_COMMAND_ON, default = SERVICE_TURN_ON): cv.string,
             vol.Optional(CONF_COMMAND_OFF, default = SERVICE_TURN_OFF): cv.string,
             vol.Optional(CONF_FORCE_TURN, default = True): cv.boolean,
+            vol.Optional(CONF_FORCE_INITIAL, default = True): cv.boolean
         })
     )
 }, extra=vol.ALLOW_EXTRA)
@@ -212,7 +230,7 @@ async def async_setup(hass, config):
             name = "{} {}".format(parent_name, i)
             
             # definition of children
-            entity = Casovac(hass, new_object_id, name, start_time, end_time)
+            entity = Casovac(hass, new_object_id, name, start_time, end_time, cfg.get(CONF_FORCE_INITIAL))
             my_debug("entity: {} setting up: {}".format(entity, new_object_id))              
             hass.data[DOMAIN][O_CHILDREN][new_object_id] = entity            
             entities.append(entity)
@@ -282,9 +300,11 @@ async def async_setup(hass, config):
             start_time = call.data.get(ATTR_START_TIME)
             end_time = call.data.get(ATTR_END_TIME)   
             if end_time is None:                     
-                end_time = get_end_time(start_time, end_time)
-                            
-            my_debug("Called service for: {}".format(entity.entity_id))
+                delta = call.data.get(ATTR_TIME_DELTA)
+                if delta is not None:                    
+                    just_now = datetime.datetime.now()                        
+                    start = just_now.replace(hour=start_time.hour, minute=start_time.minute, second=0)                    
+                    end_time =start + datetime.timedelta(minutes = delta)                    
             entity.set_time(start_time, end_time)        
         except:
             raise ValueError('Wrong time parametres')        
@@ -311,7 +331,8 @@ async def async_setup(hass, config):
     )
 
     async def async_reset_timers(entity, call): 
-        entity.reset_timers()
+        await entity.reset_timers()
+
     component.async_register_entity_service(
         SERVICE_RESET_TIMERS, SERVICE_RESET_TIMERS_SCHEMA, 
         async_reset_timers
@@ -383,9 +404,9 @@ class CasovacHlavni(TurnonoffEntity):
     def __init__(self, hass, object_id, name, pocet, cfg):
         """Inicializace hlavni ridici class"""
         super().__init__(hass, object_id, True, name)        
-        self._pocet = pocet                                 # pocet zadefinovanych casovacu
-        self._cfg = cfg                                     # konfigurace v dane domene
-        self._hass = hass                                   # uschovani classu hass
+        self._pocet = pocet                                # pocet zadefinovanych casovacu
+        self._cfg = cfg                                    # konfigurace v dane domene
+        self._hass = hass                                  # uschovani classu hass
         self._active_child_id = None                       # active child
         self._state = STATE_ON  
         self._turn_on = cfg.get(CONF_COMMAND_ON)
@@ -399,9 +420,12 @@ class CasovacHlavni(TurnonoffEntity):
         """ Returning if set command """
         return self._turn_on == to_do
 
-    def reset_timers(self):
-        for _, entity in self._hass.data[DOMAIN][O_CHILDREN]:
-            entity.reset_timers()
+    async def reset_timers(self):
+        """ Reseting all timers """
+        
+        for _ , entity in self._hass.data[DOMAIN][O_CHILDREN]:
+            my_debug("Reseting timers: {}".format(entity))
+            entity.reset_timers(    )
 
     @property
     def should_poll(self):
@@ -467,7 +491,7 @@ class CasovacHlavni(TurnonoffEntity):
 
         # Searching for active interval
         i = 1        
-        praveTed = datetime.datetime.now() 
+        just_now = datetime.datetime.now() 
 
         while (self._active_child_id == None) and (i <= self._pocet):        
             entity_id = get_child_object_id(self.entity_id, i)
@@ -481,10 +505,10 @@ class CasovacHlavni(TurnonoffEntity):
 
             start_time = attr[ATTR_START_TIME]
             end_time = attr[ATTR_END_TIME]
-            if (praveTed >= prevedCasPar(start_time, praveTed)) and (praveTed <= prevedCasPar(end_time, praveTed)):        
+            if (just_now >= prevedCasPar(start_time, just_now)) and (just_now <= prevedCasPar(end_time, just_now)):        
                 my_debug("active entity in period: {}".format(entity_id))
                 self._active_child_id = entity_id
-            i = i + 1
+            i += 1
 
         # V zavislosti je-li v casovem intervalu spoustim prikaz
         if self._active_child_id == None :
@@ -499,6 +523,8 @@ class CasovacHlavni(TurnonoffEntity):
             # nahrazeno pres hass.data
             _ , entity_id = split_entity_id(self._active_child_id)
             active_object = self.hass.data[DOMAIN][O_CHILDREN][entity_id]
+            #active_object = self.hass.states.get(entity_id)
+            my_debug(active_object)
             active_object.set_last_run()   # children
             self.set_last_run()            # parent
                 
@@ -531,19 +557,20 @@ class CasovacHlavni(TurnonoffEntity):
 class Casovac(TurnonoffEntity):
     """Casovac entita pro jednotlive zadefinovane casy."""
 
-    def __init__(self, hass, object_id, name, start_time, end_time):
+    def __init__(self, hass, object_id, name, start_time, end_time, force_initial):
         """Inicializace casovac"""
         super().__init__(hass, object_id, True, name)                        
         self._start_time = start_time                         # zacatek casoveho intervalu
         self._end_time = get_end_time(start_time, end_time)   # konecny cas                
         self._start_time_init = self._start_time
         self._end_time_init = self._end_time
+        self._force_initial = force_initial
         
     async def async_added_to_hass(self):        
         """Run when entity about to be added."""
         await super().async_added_to_hass()                
         old_state = await self.async_get_last_state()
-        if old_state is not None:                        
+        if old_state is not None and not self._force_initial:                        
             self._start_time  = old_state.attributes.get(ATTR_START_TIME, self._start_time)           
             self._end_time  = old_state.attributes.get(ATTR_END_TIME, self._end_time)           
             
