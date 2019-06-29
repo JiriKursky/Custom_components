@@ -38,8 +38,8 @@ Each child has these attributes:
 ![Attributes](https://github.com/JiriKursky/Custom_components/blob/master/library/turnoffon_attr.JPG)
 
 That's all!
-
-*Example of more complex solution with several parents and their children*
+___
+Example of more complex solution with several parents and their children*
 *configuration.yaml*:
 
 ```yaml
