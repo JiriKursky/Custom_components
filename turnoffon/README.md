@@ -142,7 +142,7 @@ turnoffon:
 ```
 It will work. However if you want manually switch on between 11:00-21:00 it will during one minute go off. In case of previous solution you can control it and you are able manually switch off in 11:00-21:00.
 # Services
-
+*turnoffon.set_time"
 ![Service](https://github.com/JiriKursky/Custom_components/blob/master/library/turnoffon_service_delta.JPG)
 
 *Why there is climate_02?*
