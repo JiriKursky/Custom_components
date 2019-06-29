@@ -39,7 +39,7 @@ Each child has these attributes:
 
 That's all!
 ___
-# Example of more complex solution with several parents and their children*
+# Example of more complex solution with several parents and their children
 *configuration.yaml*:
 
 ```yaml
