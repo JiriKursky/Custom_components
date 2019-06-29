@@ -149,6 +149,7 @@ turnoffon:
       condition_run: input_boolean.climate_sensor
 ```
 It will work. However if you want manually switch on between 11:00-21:00 it will during one minute go off. In case of previous solution you can control it and you are able manually switch off in 11:00-21:00.
+___
 # Services
 *turnoffon.set_time*
 
