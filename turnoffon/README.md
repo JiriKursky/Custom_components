@@ -142,11 +142,22 @@ turnoffon:
       condition_run: input_boolean.climate_sensor
 ```
 It will work. However if you want manually switch on between 11:00-21:00 it will during one minute go off. In case of previous solution you can control it and you are able manually switch off in 11:00-21:00.
+# Services
 
+![Service](https://github.com/JiriKursky/Custom_components/blob/master/library/turnoffon_service_delta.JPG)
+
+*Why there is climate_02?*
+
+during setup is turnoffon create for each timer its children. Parent is turnoffon.climate.
+
+
+
+# FAQ
 *Why is there force_run: false?*
 
 If it is missing or force_run: true, each minute it will send turn_on or turn_off to device. In this case if you have action_entity_id: switch.climate_cooling it can beep each minute or doing reset etc. 
 
 *I've changed timers but there are old values*
+
 You must use service turnoffon.reset_timers
 
