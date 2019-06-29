@@ -11,8 +11,7 @@ Example of using turnoffon:
 
 Installation: 
 1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy [files](https://github.com/JiriKursky/Custom_components/tree/master/turnoffon)
-2. Change your *configuration.yaml*. Platform *turnoffon*
-
+2. Change your *configuration.yaml*.
 
 Example of turn_on/turn_off of filtration in intervals:
 10:20 - 20 minutes
