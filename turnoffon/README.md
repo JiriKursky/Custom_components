@@ -7,11 +7,11 @@ This published version is more stable and close done to required standard of HA 
 
 
 Example of using turnoffon:
-![Turnoffon](https://github.com/JiriKursky/Custom_components/blob/master/library/example_pump.JPG)
 
 Installation: 
 1. Create sub-folder *turnoffon* in folder *config/custom_components* and simply copy [files](https://github.com/JiriKursky/Custom_components/tree/master/turnoffon)
 2. Change your *configuration.yaml*. Platform *turnoffon*
+![Turnoffon](https://github.com/JiriKursky/Custom_components/blob/master/library/example_pump.JPG)
 
 Example of turn_on/turn_off of filtration in intervals:
 10:20 - 20 minutes
