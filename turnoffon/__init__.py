@@ -1,16 +1,9 @@
 """
 Component for controlling devices in regular time
 
-Version is still not stable and wrong configuration can lead to frozen system
-
 Tested on under hass.io ver. 0.93.2 
 
-
-Releases:
-
-https://github.com/JiriKursky/Hass.io_CZ_SK_custom_components/releases
-
-Version 6.6.2019
+Version 20.6.2019
 
 """
 
@@ -111,16 +104,15 @@ def get_end_time(start_time, end_time) :
         return get_end_time_delta(start_time, end_time)
     return end_time
 
-#-----------------------------------------------
+
 # Service for running timer immediately
 SERVICE_RUN_CASOVAC = 'run_turnoffon'
 SERVICE_SET_RUN_CASOVAC_SCHEMA = vol.Schema({
     vol.Required(ATTR_ENTITY_ID): cv.entity_id
 })
 
-# -----------------------------
-# Service setting time run-time
 
+# Service setting time run-time
 def has_start_or_end(conf):
     """Check at least date or time is true."""
     if conf[ATTR_TIME_DELTA] and not conf[ATTR_START_TIME]:
@@ -158,8 +150,8 @@ SERVICE_RESET_TIMERS_SCHEMA = vol.Schema({
 
 ERR_CONFIG_TIME_SCHEMA = 'Chybne zadefinovane casy'
 ERR_CONFIG_TIME_2 = 'Delka musi byt v rozsahu 1 - 59'
-#-----------------------------------------------------------------------------
-# End serices
+
+# End services
 
 def kontrolaCasy(hodnota):
     """ Checking timers during config """   
@@ -273,7 +265,7 @@ async def async_setup(hass, config):
         # volam sluzbu, ktera zapne nebo vypne danou entitu               
         changed_state = ((entity._set_on(to_do) and not is_on(action_entity)) or (not entity._set_on(to_do) and is_on(action_entity)))       
         call_service =  changed_state or entity.force_turn
-        my_debug('>>>>>>>>>>>>> what: {} set_on: {} is_on: {} {} {} <<<<<<<<<<<<<<'.format(call_service, entity._set_on(to_do), is_on(action_entity), entity.force_turn, entity.entity_id))
+        my_debug(" what: {} set_on: {} is_on: {} {} {}".format(call_service, entity._set_on(to_do), is_on(action_entity), entity.force_turn, entity.entity_id))
         
         if entity.linked_entity_id is not None and changed_state:
             domain, _ = split_entity_id(entity.linked_entity_id)
@@ -287,8 +279,7 @@ async def async_setup(hass, config):
         else:
             my_debug("entity {} in right state, {} not necessary".format(action_entity.entity_id, to_do))
 
-    # ------------- Service registering     
-    # Velmi nebezpecna registrace - zde udelat chybu pri volani druheho parametru hrozi spadnuti celeho systemu
+    # Service registering         
     component.async_register_entity_service(
         SERVICE_RUN_CASOVAC, SERVICE_SET_RUN_CASOVAC_SCHEMA, 
         async_run_casovac_service
@@ -337,7 +328,7 @@ async def async_setup(hass, config):
         SERVICE_RESET_TIMERS, SERVICE_RESET_TIMERS_SCHEMA, 
         async_reset_timers
     )
-    #--------------------------------------------------------
+    
     # Adding all entities
     await component.async_add_entities(entities)
 
@@ -365,7 +356,6 @@ class TurnonoffEntity(RestoreEntity):
     def icon(self):
         """Return the icon to be used for this entity."""
         return 'mdi:timer'
-
         
     def set_turn_on(self):
         raise ValueError('For children entity not allowed')
@@ -516,14 +506,10 @@ class CasovacHlavni(TurnonoffEntity):
         else:
             # Bude se nastavovat
             self.to_do = self._turn_on
-            # Dame jeste posledni beh
-            # _LOGGER.debug(">>>>>Pokus  o zavolani:"+SERVICE_SET_TIME+"....."+aktivni_entity.entity_id)
-            # self.hass.services.async_call(DOMAIN, SERVICE_SET_TIME, { "entity_id": aktivni_entity.entity_id}, False)
-            # bez sance
-            # nahrazeno pres hass.data
             _ , entity_id = split_entity_id(self._active_child_id)
             active_object = self.hass.data[DOMAIN][O_CHILDREN][entity_id]
-            #active_object = self.hass.states.get(entity_id)
+            # active_object = self.hass.states.get(entity_id)
+            # investigate
             my_debug(active_object)
             active_object.set_last_run()   # children
             self.set_last_run()            # parent
@@ -623,5 +609,5 @@ class Casovac(TurnonoffEntity):
 
 
     def async_run_casovac(self):
-        """V tomto pripade se nepouziva."""        
+        """Not used in this case"""        
         return 
