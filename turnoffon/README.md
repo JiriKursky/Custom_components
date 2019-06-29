@@ -147,7 +147,10 @@ It will work. However if you want manually switch on between 11:00-21:00 it will
 
 *Why there is climate_02?*
 
-during setup is turnoffon create for each timer its children. Parent is turnoffon.climate.
+during setup is turnoffon create for each timer its children. Parent is turnoffon.climate. It is creating climate_01 for 8-11 and climate_02 for 21-22.
+
+Calling this service will change interval from 21-22 to 19:15-19:16.
+There is in example force_run = false. It means that after restart will it stay in 19:15-19:16. In case force_run = true it will ignore or your changes via service.
 
 
 
