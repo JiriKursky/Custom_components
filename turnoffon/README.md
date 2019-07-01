@@ -39,7 +39,7 @@ Each child has these attributes:
 
 That's all!
 ___
-# input_datetime component can be added
+*Component input_datetime*
 
 ![Climate](https://github.com/JiriKursky/Custom_components/blob/master/library/AC_example.JPG)
 
