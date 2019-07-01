@@ -53,7 +53,7 @@ climate:
   linked_entity_id: switch.klima_chlazeni
   name: A/C timer
   timers: { "6:50":"7:00", "12:00":5 }    
-```yaml
+```
 
 Automatically will be created components start end time.
 
