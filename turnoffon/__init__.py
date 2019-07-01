@@ -23,6 +23,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import dt as dt_util
 from homeassistant.core import split_entity_id
 from homeassistant.helpers.event import async_call_later
+from homeassistant.components.input_datetime import InputDatetime, ATTR_DATE, ATTR_TIME, SERVICE_SET_DATETIME, SERVICE_SET_DATETIME_SCHEMA
 
 DOMAIN = 'turnoffon'
 ENTITY_ID_FORMAT = DOMAIN + '.{}'
@@ -32,13 +33,16 @@ _LOGGER = logging.getLogger(__name__)
 
 LI_NO_DEFINITION = 'No entity added'
 
-CONF_TIMERS             = 'timers'
-CONF_FORCE_TURN         = 'force_turn'
-CONF_TIMERS_MEMORY      = 'timers_memory'
-CONF_ACTION_ENTITY_ID   = 'action_entity_id'    # what to call as controlling entity during comand_on, comannd_off
-CONF_LINKED_ENTITY_ID    = 'linked_entity_id'      # linked entity_id will be on and off acording CONF_ACTION_ENTITY_ID
-CONF_FORCE_INITIAL      = 'force_initial'
-REFRESH_INTERVAL = 59
+CONF_ACTION_ENTITY_ID       = 'action_entity_id'        # what to call as controlling entity during comand_on, comannd_off
+CONF_FORCE_INITIAL          = 'force_initial'
+CONF_FORCE_TURN             = 'force_turn'
+CONF_LINKED_ENTITY_ID       = 'linked_entity_id'        # linked entity_id will be on and off acording CONF_ACTION_ENTITY_ID
+CONF_INPUT_DATETIME         = 'input_datetime'
+CONF_TIMERS                 = 'timers'
+CONF_TIMERS_MEMORY          = 'timers_memory'
+
+
+SCAN_INTERVAL = 59
 SHUT_DOWN = False                               # shutting down on stop HA
 
 O_PARENT = 'PARENT'
@@ -48,9 +52,11 @@ O_CHILDREN = 'CHILDREN'
 ATTR_START_TIME         = 'start_time'
 ATTR_TIME_DELTA         = 'time_delta'
 ATTR_END_TIME           = 'end_time'
-ATTR_LAST_RUN           = 'last_run'
-ATTR_START_TIME_INIT    = 'start_time_init'
-ATTR_END_TIME_INIT      = 'end_time_init'
+ATTR_LAST_RUN               = 'last_run'
+ATTR_START_TIME_INIT        = 'start_time_init'
+ATTR_END_TIME_INIT          = 'end_time_init'
+ATTR_LINKED_ENTITY_ID       = 'linked_entity_id'
+
 
 ATTR_ACTIVE_CHILD_ID   = 'active_child_id'
 # There are several entities defined by this routine, but only one have to be active in interval
@@ -64,7 +70,10 @@ def my_debug(s):
     _LOGGER.debug("line: {} -> {}".format(line, s))
 
 def time_to_string(t_cas):
-    return t_cas.strftime('%H:%M')
+    try :
+        return t_cas.strftime('%H:%M')
+    except :
+        return None
 
 def string_to_time(s):
     try:
@@ -179,7 +188,8 @@ CONFIG_SCHEMA = vol.Schema({
             vol.Optional(CONF_COMMAND_ON, default = SERVICE_TURN_ON): cv.string,
             vol.Optional(CONF_COMMAND_OFF, default = SERVICE_TURN_OFF): cv.string,
             vol.Optional(CONF_FORCE_TURN, default = True): cv.boolean,
-            vol.Optional(CONF_FORCE_INITIAL, default = True): cv.boolean
+            vol.Optional(CONF_FORCE_INITIAL, default = True): cv.boolean,
+            vol.Optional(CONF_INPUT_DATETIME, default = False): cv.boolean,
         })
     )
 }, extra=vol.ALLOW_EXTRA)
@@ -195,7 +205,10 @@ def get_child_object_id(parent, number):
 async def async_setup(hass, config):
     """First setup."""
     component = EntityComponent(_LOGGER, DOMAIN, hass)
+    component_input_datetime = EntityComponent(_LOGGER, "input_datetime", hass)
     entities = []
+    entities_input_datetime = []
+
     # Store entities. I think it is sick, should use call service instead, but loops and loops
     hass.data[DOMAIN] = { O_PARENT: {}, O_CHILDREN: {}}
     
@@ -213,7 +226,7 @@ async def async_setup(hass, config):
         parent_name = cfg.get(CONF_NAME) 
         if parent_name is None:
             parent_name = object_id
-        
+        input_datetime = cfg.get(CONF_INPUT_DATETIME)
         # citac
         i = 0    
         for start_time, end_time in casy.items():
@@ -222,11 +235,26 @@ async def async_setup(hass, config):
             name = "{} {}".format(parent_name, i)
             
             # definition of children
-            entity = Casovac(hass, new_object_id, name, start_time, end_time, cfg.get(CONF_FORCE_INITIAL))
-            my_debug("entity: {} setting up: {}".format(entity, new_object_id))              
-            hass.data[DOMAIN][O_CHILDREN][new_object_id] = entity            
-            entities.append(entity)
-        
+            end_time = get_end_time(start_time, end_time)   # konecny cas                
+            casovac = Casovac(hass, new_object_id, name, start_time, end_time, cfg.get(CONF_FORCE_INITIAL))
+            my_debug("entity: {} setting up: {}".format(casovac, new_object_id))              
+            hass.data[DOMAIN][O_CHILDREN][new_object_id] = casovac                                    
+            
+            if input_datetime :
+                input_object_id = "s_{}".format(new_object_id)
+                name_input = "{} start".format(name)
+                edit_start = M_InputDatetime(input_object_id, name_input, start_time, new_object_id, True)
+                #edit_start = M_InputDatetime(input_object_id, name_input, False, True, None, start_time)
+                entities_input_datetime.append(edit_start)
+
+                name_input = "{} end".format(name)
+                input_object_id = "e_{}".format(new_object_id)
+                edit_end = M_InputDatetime(input_object_id, name_input, end_time, new_object_id, False)
+                #edit_end = InputDatetime(input_object_id, name_input, False, True, None, end_time)
+                entities_input_datetime.append(edit_end)
+                casovac.edit_entity(edit_start, edit_end)
+            entities.append(casovac)
+            
         # Create entity_id
         casovacHlavni = CasovacHlavni(hass, object_id, parent_name, i, cfg)
 
@@ -234,7 +262,11 @@ async def async_setup(hass, config):
         hass.data[DOMAIN][O_PARENT][object_id] = casovacHlavni        
 
         # Setting main timer - loop for checking interval        
-        async_call_later(hass, REFRESH_INTERVAL, casovacHlavni.regular_loop())
+        """
+        async_track_time_interval(hass, casovacHlavni.regular_loop(),
+                        datetime.timedelta(seconds=SCAN_INTERVAL))
+        """
+        async_call_later(hass, SCAN_INTERVAL, casovacHlavni.regular_loop())
         entities.append(casovacHlavni)        
     if not entities:
         _LOGGER.info(LI_NO_DEFINITION)    
@@ -262,7 +294,7 @@ async def async_setup(hass, config):
             return
         
 
-        # volam sluzbu, ktera zapne nebo vypne danou entitu               
+        # turn off or turn on? decide here
         changed_state = ((entity._set_on(to_do) and not is_on(action_entity)) or (not entity._set_on(to_do) and is_on(action_entity)))       
         call_service =  changed_state or entity.force_turn
         my_debug(" what: {} set_on: {} is_on: {} {} {}".format(call_service, entity._set_on(to_do), is_on(action_entity), entity.force_turn, entity.entity_id))
@@ -328,16 +360,39 @@ async def async_setup(hass, config):
         SERVICE_RESET_TIMERS, SERVICE_RESET_TIMERS_SCHEMA, 
         async_reset_timers
     )
-    
+
+
+    async def async_set_datetime_service(entity, call):
+        """Handle a call to the input datetime 'set datetime' service."""
+        time = call.data.get(ATTR_TIME)
+        date = call.data.get(ATTR_DATE)
+        if (entity.has_date and not date) or (entity.has_time and not time):
+            _LOGGER.error("Invalid service data for %s "
+                          "input_datetime.set_datetime: %s",
+                          entity.entity_id, str(call.data))
+            return
+
+        entity.async_set_datetime(date, time)
+
+    if entities_input_datetime :
+        component_input_datetime.async_register_entity_service(
+            SERVICE_SET_DATETIME, SERVICE_SET_DATETIME_SCHEMA,
+            async_set_datetime_service
+        )
+
     # Adding all entities
     await component.async_add_entities(entities)
+    if entities_input_datetime :
+        await component_input_datetime.async_add_entities(entities_input_datetime)
 
     # Stopping with Homeassistant
-    def stop_turnoffon(event):
+    async def stop_turnoffon(event):
         """Disconnect."""
         my_debug("Shutting down")
         SHUT_DOWN = True                
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_turnoffon)
+        
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_turnoffon)    
+    
 
     return True
 
@@ -447,12 +502,20 @@ class CasovacHlavni(TurnonoffEntity):
                 entity_is_on = False
             if not entity_is_on:                
                 my_debug("Condition stop calling")
-                async_call_later(self.hass, REFRESH_INTERVAL, self.regular_loop())
+                """
+                async_track_time_interval(self.hass, self.regular_loop(),
+                        datetime.timedelta(seconds=SCAN_INTERVAL))
+                """
+                async_call_later(self.hass, SCAN_INTERVAL, self.regular_loop())
                 return        
         my_debug("Calling service: {} - {} for: {} ".format(DOMAIN, SERVICE_RUN_CASOVAC, self.entity_id))  
         await self.hass.services.async_call(DOMAIN, SERVICE_RUN_CASOVAC, { ATTR_ENTITY_ID: self.entity_id })            
-        my_debug("asking for call later after {} seconds".format(REFRESH_INTERVAL))        
-        async_call_later(self.hass, REFRESH_INTERVAL, self.regular_loop())
+        my_debug("asking for call later after {} seconds".format(SCAN_INTERVAL))        
+        """
+        async_track_time_interval(self.hass, self.regular_loop(),
+                        datetime.timedelta(seconds=SCAN_INTERVAL))
+        """
+        async_call_later(self.hass, SCAN_INTERVAL, self.regular_loop())
     
     def set_turn_on(self):
         self._state = STATE_ON
@@ -547,11 +610,17 @@ class Casovac(TurnonoffEntity):
         """Inicializace casovac"""
         super().__init__(hass, object_id, True, name)                        
         self._start_time = start_time                         # zacatek casoveho intervalu
-        self._end_time = get_end_time(start_time, end_time)   # konecny cas                
+        self._end_time = end_time
         self._start_time_init = self._start_time
         self._end_time_init = self._end_time
         self._force_initial = force_initial
+        self._entity_edit_start = None
+        self._entity_edit_end = None
         
+    def edit_entity(self, edit_start, edit_end) :
+        self._entity_edit_start = edit_start
+        self._entity_edit_end = edit_end
+    
     async def async_added_to_hass(self):        
         """Run when entity about to be added."""
         await super().async_added_to_hass()                
@@ -560,7 +629,6 @@ class Casovac(TurnonoffEntity):
             self._start_time  = old_state.attributes.get(ATTR_START_TIME, self._start_time)           
             self._end_time  = old_state.attributes.get(ATTR_END_TIME, self._end_time)           
             
-
     @property
     def should_poll(self):
         """If entity should be polled."""
@@ -597,17 +665,43 @@ class Casovac(TurnonoffEntity):
                 
     def set_time(self, start_time, end_time):
         """ Service uvnitr jednotliveho casovace. """        
-        my_debug("Setting new start_time: {}".format(start_time))        
-        if start_time is None:
-            start_time = self._start_time
-        else:
-            self._start_time = time_to_string(start_time)
+        my_debug("Setting new time: {} {}".format(start_time, end_time))        
+        try:
+            if start_time is None:
+                start_time = self._start_time
+            else:
+                self._start_time = time_to_string(start_time)
             
-        if end_time is not None:            
-            self._end_time = time_to_string(end_time)            
-        self.async_schedule_update_ha_state()
+            if end_time is not None:            
+                self._end_time = time_to_string(end_time)            
+            self.async_schedule_update_ha_state()
+        except:
+            _LOGGER.error('Set time was not possible')
 
 
     def async_run_casovac(self):
         """Not used in this case"""        
         return 
+
+class M_InputDatetime(InputDatetime):
+    """ Modified InputDatetime """
+    # input_object_id, name_input, start_time, new_object_id, True
+    def __init__(self, object_id, name, initial, link_entity, start):
+        super().__init__(object_id, name, False, True, None, initial)
+        self._link_entity = ENTITY_ID_FORMAT.format(link_entity)
+        self._start = start
+            
+    async def _call_service(self, time_val) :        
+        if self._start :            
+            my_debug("Start new value: {}".format(time_val))
+            await self.hass.services.async_call(DOMAIN, SERVICE_SET_TIME, { ATTR_ENTITY_ID: self._link_entity, ATTR_START_TIME: time_to_string(time_val) }, blocking=True)        
+        else :
+            my_debug("End new value: {}".format(time_val))
+            await self.hass.services.async_call(DOMAIN, SERVICE_SET_TIME, { ATTR_ENTITY_ID: self._link_entity, ATTR_END_TIME: time_to_string(time_val) }, blocking=True)        
+
+    def async_set_datetime(self, date_val, time_val):
+        """ Is calling in fire of SERVICE_SET_DATETIME """
+        super().async_set_datetime(date_val, time_val)             
+        test = time_to_string(time_val)
+        if test is not None:
+            async_call_later(self.hass, 1, self._call_service(time_val))
