@@ -1,7 +1,7 @@
 # Simple defining several timers for controlling devices during day
 For instance controlling of filtration in swimming pool, well pump
 
-Tested on *hass.io* ver. 0.93.2 
+Tested on *hass.io* ver. 0.93.2 and higher
 
 This published version is more stable and close done to required standard of HA development rules.
 
