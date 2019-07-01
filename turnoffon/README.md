@@ -39,6 +39,25 @@ Each child has these attributes:
 
 That's all!
 ___
+# input_datetime component can be added
+
+![Climate](https://github.com/JiriKursky/Custom_components/blob/master/library/AC_example.JPG)
+
+If you need run-time change time intervals, you can use input_datetime component:
+
+```yaml
+climate:  
+  input_datetime: true
+  force_turn: false  
+  action_entity_id: input_boolean.klima_chlazeni
+  linked_entity_id: switch.klima_chlazeni
+  name: A/C timer
+  timers: { "6:50":"7:00", "12:00":5 }    
+```yaml
+
+Automatically will be created components start end time.
+
+___
 # Example of more complex solution with several parents and their children
 *configuration.yaml*:
 
