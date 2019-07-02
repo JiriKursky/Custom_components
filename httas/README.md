@@ -4,15 +4,10 @@ You can completely switch off MQTT on your Tasmota Sonoff device
 
 ![Sonoff](https://github.com/JiriKursky/Custom_components/blob/master/library/sonoffbasic.jpg)
 
-Choose yourself:
+Installation: 
+1. Create sub-folder *httas* in folder *config/custom_components* and simply copy [files](https://github.com/JiriKursky/Custom_components/tree/master/httas)
+2. Change your *configuration.yaml*.
 
-Advantages of this solution:
-- simple configuration
-- no external server
-- no port forwarding
-
-Disadvantages:
-- not standard definition like MQTT
 
 in *configuration.yaml* section *switches*
 ```yaml
