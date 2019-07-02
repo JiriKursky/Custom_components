@@ -14,6 +14,7 @@ from inspect import currentframe, getframeinfo
 DOMAIN = 'httas'
 ENTITY_ID_FORMAT = 'switch.{}'
 
+CONF_FOLLOW_DEVICE = 'follow_device'
 R_POWER = 'POWER'                   # Return json
 CMND_POWER = 'POWER'                # Get info if is ON/OFF
 CMND_POWER_ON = 'Power%20On'        # Comnmand to turn on
@@ -26,6 +27,7 @@ HTTP_TIMEOUT = 5
 # Validation of the user's configuration
 SWITCH_SCHEMA = vol.Schema({
     vol.Required(CONF_IP_ADDRESS): cv.string,    
+    vol.Optional(CONF_FOLLOW_DEVICE, default = True): cv.boolean,
     vol.Optional(CONF_FRIENDLY_NAME): cv.string,
     vol.Optional(CONF_SCAN_INTERVAL, default = 30): vol.All(cv.positive_int, vol.Range(min=3, max=59))
 })
@@ -71,6 +73,7 @@ class Sonoff(SwitchDevice):
         self._is_on = False
         self._scan_interval = pars.get(CONF_SCAN_INTERVAL) # checked in vol for value between 3 and 59
         self._ip_address = pars[CONF_IP_ADDRESS]      
+        self._follow_device = pars.get(CONF_FOLLOW_DEVICE)
         self._lost = 0
         self._lost_informed = False
 
@@ -120,7 +123,14 @@ class Sonoff(SwitchDevice):
                         "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
                         title=DOMAIN)                
             self._lost_informed = False
-            self._is_on = value[R_POWER] == 'ON'                  
+            if self._follow_device:
+                self._is_on = value[R_POWER] == 'ON'                  
+            elif self._is_on != value[R_POWER]: 
+                if self._is_on :
+                    self.turn_on()
+                else:
+                    self.turn_off()
+                
             self.async_schedule_update_ha_state()
             return True                                                            
         
