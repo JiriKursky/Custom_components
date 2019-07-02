@@ -1,6 +1,7 @@
 # Httas
 
-You can completely switch off MQTT on your Tasmota Sonoff device
+You can completely switch off MQTT on your Tasmota Sonoff device.
+Communication is via web request officially published [here](https://github.com/arendst/Sonoff-Tasmota/wiki/Commands)
 
 ![Sonoff](https://github.com/JiriKursky/Custom_components/blob/master/library/sonoffbasic.jpg)
 
