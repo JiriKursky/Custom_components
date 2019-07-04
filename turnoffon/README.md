@@ -39,6 +39,22 @@ Each child has these attributes:
 
 That's all!
 ___
+*Timing*
+
+You can add there days of weeks:
+
+```yaml
+timers: { "6:50":"7:00", "12:00":5 }    
+weekdays: ['mon', 'tue', 'thu']
+```
+Only in this weekdays will be switch on
+
+all possible values of weekdays:
+
+```yaml
+WEEKDAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+```
+___
 *Component input_datetime*
 
 ![Climate](https://github.com/JiriKursky/Custom_components/blob/master/library/AC_example.JPG)
