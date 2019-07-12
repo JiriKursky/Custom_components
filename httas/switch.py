@@ -75,7 +75,8 @@ class Sonoff(SwitchDevice):
         self._ip_address = pars[CONF_IP_ADDRESS]      
         self._follow_device = pars.get(CONF_FOLLOW_DEVICE)
         self._lost = 0
-        self._lost_informed = False
+        self._lost_informed = False # info about losing
+        self._info_state_ok = True  # info that everything is ok
 
     def _debug(self, s):
         cf = currentframe()
@@ -112,17 +113,18 @@ class Sonoff(SwitchDevice):
                 except:            
                     value = None
         except:
-            self._debug("Exception")             
+            self._debug("Exception") 
+        # value is setting None in the start                        
         if value is None:
             return False
         else:
             self._debug("returned with success power: {}".format(value[R_POWER]))
             self._lost = 0
-            if self._lost_informed:
+            if not self._info_state_ok:
                 self.hass.components.persistent_notification.create(
                         "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
-                        title=DOMAIN)                
-            self._lost_informed = False
+                        title=DOMAIN) 
+                self._info_state_ok = True                           
             if self._follow_device:
                 self._is_on = value[R_POWER] == 'ON'                  
             elif self._is_on != value[R_POWER]: 
@@ -144,10 +146,12 @@ class Sonoff(SwitchDevice):
             scan_interval = 5
             if self._lost > MAX_LOST:
                 scan_interval = 59
+                self._lost = 0
                 if not self._lost_informed:
                     self.hass.components.persistent_notification.create(
-                        "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),
+                        "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),                    
                         title=DOMAIN)                
+                    self._info_state_ok = False
                     self._lost_informed = True
             else:
                 self._lost += 1

@@ -126,6 +126,7 @@ class SonoffSensor(Entity):
         self._ip_address = pars[CONF_IP_ADDRESS]      
         self._lost = 0
         self._lost_informed = False
+        self._info_state_ok = True  # info that everything is ok
         
     def _debug(self, s):
         cf = currentframe()
@@ -177,10 +178,12 @@ class SonoffSensor(Entity):
             self._is_available = False
             if self._lost > MAX_LOST:
                 scan_interval = 59
+                self._lost = 0
                 if not self._lost_informed:
                     self.hass.components.persistent_notification.create(
                         "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),
                         title=DOMAIN)                
+                    self._info_state_ok = False
                     self._lost_informed = True
             else:
                 self._lost += 1
@@ -189,10 +192,11 @@ class SonoffSensor(Entity):
             self.hass.helpers.event.async_call_later(scan_interval, self._do_update())        
             return False
         self._lost = 0
-        if self._lost_informed:
+        if not self._info_state_ok:
             self.hass.components.persistent_notification.create(
                 "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
-                title=DOMAIN)                                
+                title=DOMAIN)      
+            self._info_state_ok = True                                                     
         value = self._json_key_value(SENSORS[self._sensor_type][S_VALUE], value)                                            
         self._state = value
         self._is_available = True
