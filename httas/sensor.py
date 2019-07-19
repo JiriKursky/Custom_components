@@ -22,7 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 
 ASYNC_TIMEOUT = 5 # Timeout for async courutine
 
-
+CONF_NOTIFICATION = 'notification'
 CMND_STATUS = 'status%208'
 CMND_POWER = 'POWER'
 CMND_POWER_ON = 'Power%20On'
@@ -68,6 +68,7 @@ SENSORS = {
 SENSOR_SCHEMA = vol.Schema({
     vol.Required(CONF_IP_ADDRESS): cv.string,    
     vol.Optional(CONF_FRIENDLY_NAME): cv.string,
+    vol.Optional(CONF_NOTIFICATION, default = True): cv.boolean,
     vol.Required(CONF_SENSOR_TYPE): vol.In(SENSORS.keys())
 })
 
@@ -118,12 +119,13 @@ class SonoffSensor(Entity):
         self._unit_of_measurement = SENSORS[sensor_type][S_UNIT]
         self._cmnd = SENSORS[sensor_type][S_CMND]
         self._state = None
-        icon = pars.get(CONF_ICON)
+        icon = pars.get(CONF_ICON)        
         if icon is None:
             icon = SENSORS[sensor_type][S_ICON]
         self._icon = icon                
         self._next_expiration = None
         self._ip_address = pars[CONF_IP_ADDRESS]      
+        self._notification = pars.get(CONF_NOTIFICATION)
         self._lost = 0
         self._lost_informed = False
         self._info_state_ok = True  # info that everything is ok
@@ -180,9 +182,10 @@ class SonoffSensor(Entity):
                 scan_interval = 59
                 self._lost = 0
                 if not self._lost_informed:
-                    self.hass.components.persistent_notification.create(
-                        "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),
-                        title=DOMAIN)                
+                    if self._notification:
+                        self.hass.components.persistent_notification.create(
+                            "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),
+                            title=DOMAIN)                
                     self._info_state_ok = False
                     self._lost_informed = True
             else:
@@ -193,9 +196,10 @@ class SonoffSensor(Entity):
             return False
         self._lost = 0
         if not self._info_state_ok:
-            self.hass.components.persistent_notification.create(
-                "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
-                title=DOMAIN)      
+            if self._notification:
+                self.hass.components.persistent_notification.create(
+                    "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
+                    title=DOMAIN)      
             self._info_state_ok = True                                                     
         value = self._json_key_value(SENSORS[self._sensor_type][S_VALUE], value)                                            
         self._state = value

@@ -15,11 +15,12 @@ DOMAIN = 'httas'
 ENTITY_ID_FORMAT = 'switch.{}'
 
 CONF_FOLLOW_DEVICE = 'follow_device'
-R_POWER = 'POWER'                   # Return json
+CONF_NOTIFICATION = 'notification'
 CMND_POWER = 'POWER'                # Get info if is ON/OFF
 CMND_POWER_ON = 'Power%20On'        # Comnmand to turn on
 CMND_POWER_OFF = 'Power%20Off'      # Comnmand to turn off
 MAX_LOST = 5                        # Can be lost in commincation
+R_POWER = 'POWER'                   # Return json
 
 _LOGGER = logging.getLogger(__name__)
 HTTP_TIMEOUT = 5
@@ -29,6 +30,7 @@ SWITCH_SCHEMA = vol.Schema({
     vol.Required(CONF_IP_ADDRESS): cv.string,    
     vol.Optional(CONF_FOLLOW_DEVICE, default = True): cv.boolean,
     vol.Optional(CONF_FRIENDLY_NAME): cv.string,
+    vol.Optional(CONF_NOTIFICATION, default = True): cv.boolean,
     vol.Optional(CONF_SCAN_INTERVAL, default = 30): vol.All(cv.positive_int, vol.Range(min=3, max=59))
 })
 
@@ -74,6 +76,7 @@ class Sonoff(SwitchDevice):
         self._scan_interval = pars.get(CONF_SCAN_INTERVAL) # checked in vol for value between 3 and 59
         self._ip_address = pars[CONF_IP_ADDRESS]      
         self._follow_device = pars.get(CONF_FOLLOW_DEVICE)
+        self._notification = pars.get(CONF_NOTIFICATION)
         self._lost = 0
         self._lost_informed = False # info about losing
         self._info_state_ok = True  # info that everything is ok
@@ -121,7 +124,8 @@ class Sonoff(SwitchDevice):
             self._debug("returned with success power: {}".format(value[R_POWER]))
             self._lost = 0
             if not self._info_state_ok:
-                self.hass.components.persistent_notification.create(
+                if self._notification:
+                    self.hass.components.persistent_notification.create(
                         "{} is ok. Scan interval is {} seconds now".format(self._ip_address, self._scan_interval),
                         title=DOMAIN) 
                 self._info_state_ok = True                           
@@ -148,9 +152,10 @@ class Sonoff(SwitchDevice):
                 scan_interval = 59
                 self._lost = 0
                 if not self._lost_informed:
-                    self.hass.components.persistent_notification.create(
-                        "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),                    
-                        title=DOMAIN)                
+                    if self._notification:
+                        self.hass.components.persistent_notification.create(
+                            "{} has permanent error.<br/>Please fix device. Scan interval is {} seconds now".format(self._ip_address, scan_interval),                    
+                            title=DOMAIN)                
                     self._info_state_ok = False
                     self._lost_informed = True
             else:
