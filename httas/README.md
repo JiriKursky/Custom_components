@@ -21,6 +21,10 @@ in *configuration.yaml* section *switches*
       friendly_name: Subwoofer
       ip_address: xxx.xxx.x.xx # ip address sonnoff controlling subwoofer        
 ```
+
+You can put in configuration notification = false. In case when HA is not able reach device were will be no message. 
+
+
 In case of sensors. Just now supporting DS18B20 for temperature and current.
 
 Sensors
